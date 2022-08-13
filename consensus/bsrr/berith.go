@@ -554,6 +554,7 @@ func (c *BSRR) Finalize(chain consensus.ChainReader, header *types.Header, state
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
 func (c *BSRR) Authorize(signer common.Address, signFn SignerFn) {
+	fmt.Println("signer : ", signer)
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
