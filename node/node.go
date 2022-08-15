@@ -76,6 +76,7 @@ type Node struct {
 
 // New creates a new P2P node, ready for protocol registration.
 func New(conf *Config) (*Node, error) {
+	fmt.Println("New() *Node 호출")
 	// Copy config and resolve the datadir so future changes to the current
 	// working directory don't affect the node.
 	confCopy := *conf
