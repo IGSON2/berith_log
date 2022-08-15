@@ -207,13 +207,14 @@ func (n *Node) Start() error {
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
 		if err := service.Start(running); err != nil {
-			fmt.Println(reflect.TypeOf(service), " service start !, kind : ", kind)
 			for _, kind := range started {
 				services[kind].Stop()
 			}
 			running.Stop()
 
 			return err
+		} else {
+			fmt.Println(reflect.TypeOf(service), " service start !, kind : ", kind)
 		}
 		// Mark the service started for potential cleanup
 		started = append(started, kind)
@@ -261,6 +262,7 @@ func (n *Node) GetRpcApis() []rpc.API {
 // startup. It's not meant to be called at any time afterwards as it makes certain
 // assumptions about the state of the node.
 func (n *Node) startRPC(services map[reflect.Type]Service) error {
+	fmt.Println("Node.startRPC() 호출")
 	// Gather all the possible APIs to surface
 	apis := n.apis()
 	for _, service := range services {
@@ -292,6 +294,7 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 
 // startInProc initializes an in-process RPC endpoint.
 func (n *Node) startInProc(apis []rpc.API) error {
+	fmt.Println("Node.startInProc() 호출")
 	// Register all the APIs exposed by the services
 	handler := rpc.NewServer()
 	for _, api := range apis {
@@ -314,6 +317,7 @@ func (n *Node) stopInProc() {
 
 // startIPC initializes and starts the IPC RPC endpoint.
 func (n *Node) startIPC(apis []rpc.API) error {
+	fmt.Println("Node.startIPC() 호출")
 	if n.ipcEndpoint == "" {
 		return nil // IPC disabled.
 	}
@@ -343,6 +347,7 @@ func (n *Node) stopIPC() {
 
 // startHTTP initializes and starts the HTTP RPC endpoint.
 func (n *Node) startHTTP(endpoint string, apis []rpc.API, modules []string, cors []string, vhosts []string, timeouts rpc.HTTPTimeouts) error {
+	fmt.Println("Node.startHTTP() 호출")
 	// Short circuit if the HTTP endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
@@ -376,6 +381,7 @@ func (n *Node) stopHTTP() {
 
 // startWS initializes and starts the websocket RPC endpoint.
 func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrigins []string, exposeAll bool) error {
+	fmt.Println("Node.startWS() 호출")
 	// Short circuit if the WS endpoint isn't being exposed
 	if endpoint == "" {
 		return nil

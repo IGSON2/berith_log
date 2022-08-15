@@ -357,11 +357,13 @@ func newPeerSet() *peerSet {
 
 // SubscribeNewPeers subscribes to peer arrival events.
 func (ps *peerSet) SubscribeNewPeers(ch chan<- *peerConnection) event.Subscription {
+	fmt.Println("dwonloader.go 360 - SubscribeNewPeers() 호출")
 	return ps.newPeerFeed.Subscribe(ch)
 }
 
 // SubscribePeerDrops subscribes to peer departure events.
 func (ps *peerSet) SubscribePeerDrops(ch chan<- *peerConnection) event.Subscription {
+	fmt.Println("downloader.go 366 - SubscribePeerDrops() 호출")
 	return ps.peerDropFeed.Subscribe(ch)
 }
 
@@ -383,6 +385,7 @@ func (ps *peerSet) Reset() {
 // average of all existing peers, to give it a realistic chance of being used
 // for data retrievals.
 func (ps *peerSet) Register(p *peerConnection) error {
+	fmt.Println("downloader.go 388 / peerSet.Register() 호출")
 	// Retrieve the current median RTT as a sane default
 	p.rtt = ps.medianRTT()
 
@@ -418,6 +421,7 @@ func (ps *peerSet) Register(p *peerConnection) error {
 // Unregister removes a remote peer from the active set, disabling any further
 // actions to/from that particular entity.
 func (ps *peerSet) Unregister(id string) error {
+	fmt.Println("downloader.go 424 / peerSet.Unregister() 호출")
 	ps.lock.Lock()
 	p, ok := ps.peers[id]
 	if !ok {

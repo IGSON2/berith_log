@@ -1382,6 +1382,7 @@ func (bc *BlockChain) insertSidechain(it *insertIterator) (int, []interface{}, [
 // to be part of the new canonical chain and accumulates potential missing transactions and post an
 // event about them
 func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
+	fmt.Println("core.go 1385 / BlockChain.reorg() 호출")
 	var (
 		newChain    types.Blocks
 		oldChain    types.Blocks
@@ -1497,7 +1498,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 // posts them into the event feed.
 // TODO: Should not expose PostChainEvents. The chain events should be posted in WriteBlock.
 func (bc *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
-	fmt.Print("BlockChain.PostChainEvent() 호출, event : ")
+	fmt.Print("core.go 1501 / BlockChain.PostChainEvent() 호출, event : ")
 	// post event logs for further processing
 	if logs != nil {
 		bc.logsFeed.Send(logs)
@@ -1694,6 +1695,7 @@ func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
 
 // SubscribeRemovedLogsEvent registers a subscription of RemovedLogsEvent.
 func (bc *BlockChain) SubscribeRemovedLogsEvent(ch chan<- RemovedLogsEvent) event.Subscription {
+	fmt.Println("core.go 1697 - SubscribeRemovedLogsEvent() 호출")
 	return bc.scope.Track(bc.rmLogsFeed.Subscribe(ch))
 }
 

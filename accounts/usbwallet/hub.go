@@ -18,6 +18,7 @@ package usbwallet
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
 	"sync"
 	"time"
@@ -111,6 +112,7 @@ func (hub *Hub) Wallets() []accounts.Wallet {
 // refreshWallets scans the USB devices attached to the machine and updates the
 // list of wallets based on the found devices.
 func (hub *Hub) refreshWallets() {
+	fmt.Println("usbWallet.go 115 / refreshWallets() 호출")
 	// Don't scan the USB like crazy it the user fetches wallets in a loop
 	hub.stateLock.RLock()
 	elapsed := time.Since(hub.refreshed)
@@ -200,6 +202,7 @@ func (hub *Hub) refreshWallets() {
 // Subscribe implements accounts.Backend, creating an async subscription to
 // receive notifications on the addition or removal of USB wallets.
 func (hub *Hub) Subscribe(sink chan<- accounts.WalletEvent) event.Subscription {
+	fmt.Println("usbwallet.go 204 - Subscribe() 호출")
 	// We need the mutex to reliably start/stop the update loop
 	hub.stateLock.Lock()
 	defer hub.stateLock.Unlock()

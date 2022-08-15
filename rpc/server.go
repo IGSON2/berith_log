@@ -85,6 +85,7 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 	svc.typ = reflect.TypeOf(rcvr)
 	rcvrVal := reflect.ValueOf(rcvr)
 
+	fmt.Println("Server.RegisterName() 호출 , name : ", name, "Type : ", svc.typ)
 	if name == "" {
 		return fmt.Errorf("no service name for type %s", svc.typ.String())
 	}

@@ -271,7 +271,7 @@ func newMsgEventer(rw MsgReadWriter, feed *event.Feed, peerID enode.ID, proto st
 // ReadMsg reads a message from the underlying MsgReadWriter and emits a
 // "message received" event
 func (ev *msgEventer) ReadMsg() (Msg, error) {
-	fmt.Println("msgEventer.ReadMsg() 호출")
+	fmt.Println("p2p.go 274 / msgEventer.ReadMsg() 호출")
 	msg, err := ev.MsgReadWriter.ReadMsg()
 	if err != nil {
 		return msg, err
@@ -289,7 +289,7 @@ func (ev *msgEventer) ReadMsg() (Msg, error) {
 // WriteMsg writes a message to the underlying MsgReadWriter and emits a
 // "message sent" event
 func (ev *msgEventer) WriteMsg(msg Msg) error {
-	fmt.Println("msgEventer.WriteMsg() 호출")
+	fmt.Println("p2p.go - 292 / msgEventer.WriteMsg() 호출")
 	err := ev.MsgReadWriter.WriteMsg(msg)
 	if err != nil {
 		return err

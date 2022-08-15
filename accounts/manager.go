@@ -98,7 +98,7 @@ func (am *Manager) update() {
 	for {
 		select {
 		case event := <-am.updates:
-			fmt.Println("am.updates 개방 후 하위로직 실행")
+			fmt.Println("Manager.update() - am.updates 개방 후 하위로직 실행")
 			// Wallet event arrived, update local cache
 			am.lock.Lock()
 			switch event.Kind {
@@ -170,6 +170,7 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.
 func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
+	fmt.Println("accounts.go 174 - Manager.Subscribe() 호출")
 	return am.feed.Subscribe(sink)
 }
 

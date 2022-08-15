@@ -409,6 +409,7 @@ func (s *sharedUDPConn) Close() error {
 // Start starts running the server.
 // Servers can not be re-used after stopping.
 func (srv *Server) Start() (err error) {
+	fmt.Println("Server.Start() 호출")
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	if srv.running {
@@ -636,7 +637,7 @@ func (srv *Server) run(dialstate dialer) {
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
 			t := ts[i]
 			srv.log.Trace("New dial task", "task", t)
-			go func() { t.Do(srv); taskdone <- t; fmt.Println("taskdone 개방") }()
+			go func() { t.Do(srv); taskdone <- t; fmt.Printf("taskdone 개방, Task : %v \n", t) }()
 			runningTasks = append(runningTasks, t)
 		}
 		return ts[i:]
@@ -704,7 +705,7 @@ running:
 			op(peers)
 			srv.peerOpDone <- struct{}{}
 		case t := <-taskdone:
-			fmt.Println("taskdone 개방")
+			fmt.Println("taskdone 개방 후 하위로직 실행")
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
@@ -891,7 +892,6 @@ func (srv *Server) listenLoop() {
 // as a peer. It returns when the connection has been added as a peer
 // or the handshakes have failed.
 func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *enode.Node) error {
-	fmt.Println("Server.SetupConn() 호출")
 	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, cont: make(chan error)}
 	err := srv.setupConn(c, flags, dialDest)
 	if err != nil {

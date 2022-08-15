@@ -684,6 +684,7 @@ func CheckStakeBalanceAmount(totalStakingAmount, maximum *big.Int) bool {
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
+	fmt.Println("core.go 687 / TxPool.add() 호출")
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all.Get(hash) != nil {
@@ -986,6 +987,7 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
+	fmt.Println("core.go 990 / TxPool.promoteExecutables() 호출")
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
 

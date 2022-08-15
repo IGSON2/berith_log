@@ -17,6 +17,7 @@
 package rpc
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/BerithFoundation/berith-chain/log"
@@ -24,6 +25,7 @@ import (
 
 // StartHTTPEndpoint starts the HTTP RPC endpoint, configured with cors/vhosts/modules
 func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []string, vhosts []string, timeouts HTTPTimeouts) (net.Listener, *Server, error) {
+	fmt.Println("StartHTTPEndpoint() 호출")
 	// Generate the whitelist based on the allowed modules
 	whitelist := make(map[string]bool)
 	for _, module := range modules {
@@ -53,7 +55,7 @@ func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []str
 
 // StartWSEndpoint starts a websocket endpoint
 func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) (net.Listener, *Server, error) {
-
+	fmt.Println("StartWSEndpoint() 호출")
 	// Generate the whitelist based on the allowed modules
 	whitelist := make(map[string]bool)
 	for _, module := range modules {
@@ -84,6 +86,7 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 
 // StartIPCEndpoint starts an IPC endpoint.
 func StartIPCEndpoint(ipcEndpoint string, apis []API) (net.Listener, *Server, error) {
+	fmt.Println("StartIPCEndpoint() 호출")
 	// Register all the APIs exposed by the services.
 	handler := NewServer()
 	for _, api := range apis {
