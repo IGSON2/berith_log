@@ -68,6 +68,7 @@ func NewManager(backends ...Backend) *Manager {
 		kind := reflect.TypeOf(backend)
 		am.backends[kind] = append(am.backends[kind], backend)
 	}
+	fmt.Println("Manager.backends : ", am.backends)
 	go am.update()
 
 	return am

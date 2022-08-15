@@ -163,6 +163,7 @@ var DefaultTxPoolConfig = TxPoolConfig{
 
 // sanitize checks the provided user configurations and changes anything that's
 // unreasonable or unworkable.
+// sanitize는 공급된 유저 설정을 체크하고 조리에 맞지않거나 작동불가능한 부분들을 바꾼다.
 func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	conf := *config
 	if conf.Rejournal < time.Second {
