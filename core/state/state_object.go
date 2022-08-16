@@ -57,11 +57,15 @@ func (self Storage) Copy() Storage {
 }
 
 // stateObject represents an Ethereum account which is being modified.
-//
 // The usage pattern is as follows:
 // First you need to obtain a state object.
-// Account values can be accessed and modified through the object.
 // Finally, call CommitTrie to write the modified storage trie into a database.
+// Account values can be accessed and modified through the object.
+//
+// stateObjecct는 수정중인 베리드 계좌를 대변한다
+// 먼저 state object를 얻어야한다.
+// 계좌값은 객체를 통해 접근되고 수정될 수 있다.
+// 마지막으로 CommitTrie를 호출하여 수정된 스토리지 트리를 DB에 기록한다.
 type stateObject struct {
 	address  common.Address
 	addrHash common.Hash // hash of berith address of the account
@@ -100,16 +104,20 @@ func (s *stateObject) empty() bool {
 Account is the Berith consensus representation of accounts.
 These objects are stored in the main account trie.
 Add StakeBalance, BehindBalance, Selection Point
+
+Account는 Berith에서 합의된 계정 표현이다.
+이 객체는 메인 어카운트 트리에 저장되고
+StakeBalance, BehindBalance, SelectionPoint를 더한다.
 */
 type Account struct {
 	Nonce          uint64
 	Balance        *big.Int
 	Root           common.Hash // merkle root of the storage trie
-	CodeHash       []byte
-	StakeBalance   *big.Int //brt staking balance
-	StakeUpdated   *big.Int //Block number when the stake balance was updated
-	Point          *big.Int //selection Point
-	BehindBalance  []Behind //behind balance
+	CodeHash       []byte      // 스마트 컨트랙트 바이트 코드의 해시
+	StakeBalance   *big.Int    //brt staking balance
+	StakeUpdated   *big.Int    //Block number when the stake balance was updated
+	Point          *big.Int    //selection Point, 스테이킹에 대한 Point
+	BehindBalance  []Behind    //behind balance
 	Penalty        uint64
 	PenlatyUpdated *big.Int //Block Number when the penalty was updated
 }
@@ -142,7 +150,6 @@ func newObject(db *StateDB, address common.Address, data Account) *stateObject {
 	if data.StakeUpdated == nil {
 		data.StakeUpdated = new(big.Int)
 	}
-
 	if data.Point == nil {
 		data.Point = new(big.Int)
 	}

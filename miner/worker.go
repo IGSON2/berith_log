@@ -597,7 +597,7 @@ func (w *worker) resultLoop() {
 			case core.SideStatTy:
 				events = append(events, core.ChainSideEvent{Block: block})
 			}
-			w.chain.PostChainEvents(events, logs)
+			w.chain.PostChainEvents(events, logs) //211에서 구독했던 ChainHeadEvent POST
 			fmt.Println("ResultlLoop() 내부 worker.chain.PostChainEvent() 호출")
 
 			// Insert the block into the set of pending ones to resultLoop for confirmations
