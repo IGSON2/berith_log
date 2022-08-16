@@ -148,7 +148,7 @@ type Fetcher struct {
 
 // New creates a block fetcher to retrieve blocks based on hash announcements.
 func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBlock blockBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn) *Fetcher {
-	fmt.Println("New()*Fetcher 호출")
+	fmt.Println("New() *Fetcher 호출")
 	return &Fetcher{
 		notify:         make(chan *announce),
 		inject:         make(chan *inject),

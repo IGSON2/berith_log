@@ -205,6 +205,7 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
+// 연결된 피어들로부터 해시와 블록을 가져오기위해 downloader 객체를 생성한다.
 func New(mode SyncMode, stateDb berithdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn) *Downloader {
 	if lightchain == nil {
 		lightchain = chain

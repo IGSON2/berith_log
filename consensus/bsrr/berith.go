@@ -670,6 +670,8 @@ Returns the target block to determine the miner for a given parent header.
 1) [0 ~ epoch-1]      : target == block number 0(genesis block)
 2) [epoch ~ 2epoch-1] : target == epoch block number
 3) [2epoch ~ ...)     : target == block number - epoch
+
+주어진 부모 헤더의 마이너를 결정하기 위한 타겟 블록을 반환한다.
 */
 func (c *BSRR) getStakeTargetBlock(chain consensus.ChainReader, parent *types.Header) (*types.Header, bool) {
 	if parent == nil {

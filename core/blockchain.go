@@ -1049,6 +1049,9 @@ func (bc *BlockChain) addFutureBlock(block *types.Block) error {
 // wrong.
 //
 // After insertion is done, all accumulated events will be fired.
+//
+// InsertChain은 주어진 일괄 블럭들을 본래 체인으로 삽입을 시도하거나 새로운 포크를 생성한다.
+// 삽입이 끝나면 모든 수집된 이벤트들은 제거된다.
 func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	fmt.Println("Blockchain.InsertChain() 호출")
 	// Sanity check that we have something meaningful to import
@@ -1498,22 +1501,23 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 // posts them into the event feed.
 // TODO: Should not expose PostChainEvents. The chain events should be posted in WriteBlock.
 func (bc *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
-	fmt.Print("core.go 1501 / BlockChain.PostChainEvent() 호출, event : ")
+	fmt.Println("core.go 1501 / BlockChain.PostChainEvent() 호출")
 	// post event logs for further processing
 	if logs != nil {
 		bc.logsFeed.Send(logs)
 	}
+	fmt.Print(" BlockChain.PostChainEvent() / event : ")
 	for _, event := range events {
 		switch ev := event.(type) {
 		case ChainEvent:
 			bc.chainFeed.Send(ev)
-			fmt.Println("ev")
+			fmt.Println(ev)
 		case ChainHeadEvent:
 			bc.chainHeadFeed.Send(ev)
-			fmt.Println("ev")
+			fmt.Println(ev)
 		case ChainSideEvent:
 			bc.chainSideFeed.Send(ev)
-			fmt.Println("ev")
+			fmt.Println(ev)
 		}
 	}
 }

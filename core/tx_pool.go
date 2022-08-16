@@ -221,6 +221,7 @@ type TxPool struct {
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
 // transactions from the network.
 func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain) *TxPool {
+	fmt.Println("NewTxPool() 호출")
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 
@@ -270,6 +271,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 // outside blockchain events as well as for various reporting and transaction
 // eviction events.
 func (pool *TxPool) loop() {
+	fmt.Println("TxPool() 호출")
 	defer pool.wg.Done()
 
 	// Start the stats reporting and transaction eviction tickers
@@ -292,6 +294,7 @@ func (pool *TxPool) loop() {
 		select {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
+			fmt.Println("TxPool() pool.chainHeadCh 개방 후 하위로직 실행")
 			if ev.Block != nil {
 				pool.mu.Lock()
 				if pool.chainconfig.IsHomestead(ev.Block.Number()) {
@@ -460,6 +463,7 @@ func (pool *TxPool) Stop() {
 // SubscribeNewTxsEvent registers a subscription of NewTxsEvent and
 // starts sending event to the given channel.
 func (pool *TxPool) SubscribeNewTxsEvent(ch chan<- NewTxsEvent) event.Subscription {
+	fmt.Println("TxPool.SubscribenewTxsEvent() 호출")
 	return pool.scope.Track(pool.txFeed.Subscribe(ch))
 }
 
@@ -535,6 +539,9 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // Pending retrieves all currently processable transactions, grouped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
+//
+// Pending은 origin address로 그룹화되고 nonce별로 정렬되어있는 현재 처리가능한 모든 트랜잭션을 찾아온다
+// 반환된 트랜잭션은 모두 사본이며 코드를 불러옴으로써 자유롭게 수정 가능하다.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()

@@ -398,6 +398,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 // mainLoop is a standalone goroutine to regenerate the sealing task based on the received event.
 func (w *worker) mainLoop() {
+	fmt.Println("worker.mainLoop() 호출")
 	defer w.txsSub.Unsubscribe()
 	defer w.chainHeadSub.Unsubscribe()
 	defer w.chainSideSub.Unsubscribe()
@@ -405,7 +406,7 @@ func (w *worker) mainLoop() {
 	for {
 		select {
 		case req := <-w.newWorkCh:
-			fmt.Println("worker.newWorkCh 개방 후 하위 로직 실행")
+			fmt.Println("worker.mainLop() / worker.newWorkCh 개방 후 하위 로직 실행")
 			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
 
 		case ev := <-w.chainSideCh:
@@ -487,7 +488,7 @@ func (w *worker) mainLoop() {
 // taskLoop is a standalone goroutine to fetch sealing task from the generator and
 // push them to consensus engine.
 func (w *worker) taskLoop() {
-	fmt.Println("taskLoop() 호출")
+	fmt.Println("worker.taskLoop() 호출")
 	var (
 		stopCh chan struct{}
 		prev   common.Hash
@@ -503,7 +504,7 @@ func (w *worker) taskLoop() {
 	for {
 		select {
 		case task := <-w.taskCh:
-			fmt.Println("worker.taskCh 개방 후 하위 로직 실행")
+			fmt.Println("worker.taskLoop() / worker.taskCh 개방 후 하위 로직 실행")
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
 			}
@@ -536,10 +537,11 @@ func (w *worker) taskLoop() {
 // resultLoop is a standalone goroutine to handle sealing result submitting
 // and flush relative data to the database.
 func (w *worker) resultLoop() {
+	fmt.Println("worker.resultLoop() 호출")
 	for {
 		select {
 		case block := <-w.resultCh:
-			fmt.Println("worker.resultCh 개방 후 하위 로직 실행")
+			fmt.Println("worker.resultLoop() / worker.resultCh 개방 후 하위 로직 실행")
 			// Short circuit when receiving empty result.
 			if block == nil {
 				continue
@@ -585,6 +587,7 @@ func (w *worker) resultLoop() {
 
 			// Broadcast the block and announce chain insertion event
 			w.mux.Post(core.NewMinedBlockEvent{Block: block})
+			fmt.Print("worker.mux.Post() NewMinedBlockEvent 전송")
 
 			var events []interface{}
 			switch stat {
@@ -703,6 +706,7 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 }
 
 func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coinbase common.Address, interrupt *int32) bool {
+	fmt.Println("worker.commintTransacitons() 호출")
 	// Short circuit if current is nil
 	if w.current == nil {
 		return true
@@ -806,6 +810,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 			*cpy[i] = *l
 		}
 		go w.mux.Post(core.PendingLogsEvent{Logs: cpy})
+		fmt.Println("worker.mux.Post() 호출 Type : PendingLogsEvent")
 	}
 	// Notify resubmit loop to decrease resubmitting interval if current interval is larger
 	// than the user-specified one.
@@ -816,6 +821,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 }
 
 // commitNewWork generates several new sealing tasks based on the parent block.
+// commintNewWork는 부모 블록을 기반하여 여러개의 확정된 새 작업들을 생성한다.
 func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) {
 	fmt.Println("worker.commitNewWork() 호출")
 	w.mu.RLock()

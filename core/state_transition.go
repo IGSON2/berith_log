@@ -134,6 +134,8 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // the gas used (which includes gas refunds) and an error if it failed. An error always
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
+//
+// ApplyMessage는 환경 내의 이전 상태에 대해 주어진 메시지를 적용하여 새 상태를 계산합니다.
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
 	return NewStateTransition(evm, msg, gp).TransitionDb(msg.Base(), msg.Target())
 }
@@ -186,6 +188,8 @@ func (st *StateTransition) preCheck() error {
 // TransitionDb will transition the state by applying the current message and
 // returning the result including the used gas. It returns an error if failed.
 // An error indicates a consensus issue.
+//
+// TransitionDb는 현재 메시지를 적용하여 상태를 전환하고 사용된 가스량이 포함된 결과를 반환한다.
 func (st *StateTransition) TransitionDb(base types.JobWallet, target types.JobWallet) (ret []byte, usedGas uint64, failed bool, err error) {
 	if err = st.preCheck(); err != nil {
 		return
