@@ -97,8 +97,10 @@ func (n *upnp) String() string {
 	return "UPNP " + n.service
 }
 
-// discoverUPnP searches for Internet Gateway Devices
-// and returns the first one it can find on the local network.
+// finds devices matching the given target and calls matcher for all
+// advertised services of each device. The first non-nil service found
+// is sent into out. If no service matched, nil is sent.
+// 지정된 대상과 일치하는 장치를 찾고 각 장치의 보급된 모든 서비스에 대해 일치 장치를 호출합니다.
 func discoverUPnP() Interface {
 	found := make(chan *upnp, 2)
 	// IGDv1

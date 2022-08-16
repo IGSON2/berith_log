@@ -101,6 +101,10 @@ type Context struct {
 // specific errors should ever be performed. The interpreter makes
 // sure that any errors generated are to be considered faulty code.
 //
+// EVM은 이더리움 가상머신 기본 객체이며, 제공된 컨텍스트와 함께 주어진 상태 계약을 실행하기 위한 필수적인 도구들을 제공한다.
+// 어떠한 호출을 통해 발생하는 오류는 복귀 상태 및 모든 가스 소비 동작으로 간주되어야 하며,
+// 특정 오류에 대한 점검은 수행되어서는 안 된다는 점에 유의해야 한다. 인터프리터는 생성된 모든 오류가 잘못된 코드로 간주되는지 확인합니다.
+//
 // The EVM should never be reused and is not thread safe.
 type EVM struct {
 	// Context provides auxiliary blockchain related information

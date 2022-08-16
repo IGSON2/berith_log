@@ -22,11 +22,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackpal/go-nat-pmp"
+	natpmp "github.com/jackpal/go-nat-pmp"
 )
 
 // natPMPClient adapts the NAT-PMP protocol implementation so it conforms to
 // the common interface.
+// natPMPClient는 NAT-PMP 프로토콜 구현을 연결한다 그리고 일반 인터페이스와 같이 행동한다.
 type pmp struct {
 	gw net.IP
 	c  *natpmp.Client

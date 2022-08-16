@@ -26,23 +26,28 @@ import (
 	"time"
 
 	"github.com/BerithFoundation/berith-chain/log"
-	"github.com/jackpal/go-nat-pmp"
+	natpmp "github.com/jackpal/go-nat-pmp"
 )
 
 // An implementation of nat.Interface can map local ports to ports
 // accessible from the Internet.
+// nat.Interface의 구현은 인터넷으로부터 포트와 포트끼리 접근 가능하도록 있게 한다.
 type Interface interface {
 	// These methods manage a mapping between a port on the local
 	// machine to a port that can be connected to from the internet.
+	// 이 메서드는 로컬머신의 포트와 인터넷으로 부터 연결될 수 있는 포트 사이의 매핑을 관리한다.
 	//
 	// protocol is "UDP" or "TCP". Some implementations allow setting
 	// a display name for the mapping. The mapping may be removed by
 	// the gateway when its lifetime ends.
+	// 프로토콜은 UDP와 TCP를 사용하며 어떤 구현들은 매핑을 위해 이름을 공개하는 것을 허용한다.
+	// 매핑은 게이트웨이의 수명이 다하면 지워질것이다.
 	AddMapping(protocol string, extport, intport int, name string, lifetime time.Duration) error
 	DeleteMapping(protocol string, extport, intport int) error
 
 	// This method should return the external (Internet-facing)
 	// address of the gateway device.
+	// 이 메서드는 외부의 게이트웨이 디바이스 주소를 리턴해야만 한다.
 	ExternalIP() (net.IP, error)
 
 	// Should return name of the method. This is used for logging.
@@ -177,9 +182,13 @@ func PMP(gateway net.IP) Interface {
 // auto-discovered. Calls to the Interface methods on this type will
 // wait until the discovery is done and then call the method on the
 // discovered mechanism.
+// autodisc는 여전히 자동 탐색중인 포트 매핑 매커니즘을 대변한다.
+// 이 타입의 인터페이스 메서드에 대한 호출은 탐색이 종료될 때 까지 대기한 다음
+// 검색된 메커니즘의 메서드를 호출한다.
 //
 // This type is useful because discovery can take a while but we
 // want return an Interface value from UPnP, PMP and Auto immediately.
+// 이 타입은 탐색에 시간이 걸릴 수 있지만 UPnP, PMP 및 Auto에서 인터페이스 값을 즉시 반환해야 하므로 유용하다.
 type autodisc struct {
 	what string // type of interface being autodiscovered
 	once sync.Once
