@@ -97,6 +97,9 @@ type BloomIndexer struct {
 
 // NewBloomIndexer returns a chain indexer that generates bloom bits data for the
 // canonical chain for fast logs filtering.
+//
+// NewBloomIndexer는 빠른 로그 필터링을 위해 표준 체인에 대한 블룸비트를 생성하는
+// 체인 인덱서를 반환한다.
 func NewBloomIndexer(db berithdb.Database, size, confirms uint64) *core.ChainIndexer {
 	backend := &BloomIndexer{
 		db:   db,
