@@ -125,6 +125,8 @@ func (b *BloomIndexer) Process(ctx context.Context, header *types.Header) error 
 
 // Commit implements core.ChainIndexerBackend, finalizing the bloom section and
 // writing it out into the database.
+//
+// 블룸 섹션을 확정하고 데이터베이스에 기록한다.
 func (b *BloomIndexer) Commit() error {
 	batch := b.db.NewBatch()
 	for i := 0; i < types.BloomBitLength; i++ {

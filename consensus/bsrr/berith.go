@@ -97,10 +97,12 @@ var (
 
 	// errExtraSigners is returned if non-checkpoint block contain signer data in
 	// their extra-data fields.
+	// 체크포인트 블록이 아닌데 서명자 목록을 포함하고 있을 경우
 	errExtraSigners = errors.New("non-checkpoint block contains extra signer list")
 
 	// errInvalidCheckpointSigners is returned if a checkpoint block contains an
 	// invalid list of signers (i.e. non divisible by 20 bytes).
+	// 체크포인트 블록이 유효하지 않은 서명자 목록을 포함하고 있을경우 (주소 길이인 20byte로 나누어 떨어져야 함)
 	errInvalidCheckpointSigners = errors.New("invalid signer list on checkpoint block")
 
 	// errInvalidMixDigest is returned if a block's mix digest is non-zero.
@@ -318,6 +320,10 @@ func (c *BSRR) VerifyHeaders(chain consensus.ChainReader, headers []*types.Heade
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
+//
+// verifyHeader는 헤더가 합의 규칙을 따르는지 확인한다.
+// 호출자는 선택적으로 데이터베이스로부터 상위 항목을 조회하지 않도록 상위 그룹(오름차순)을 전달할 수 있다.
+// 이 기능은 새 헤더 묶음을 검증하는데 유용하다.
 func (c *BSRR) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
@@ -325,13 +331,16 @@ func (c *BSRR) verifyHeader(chain consensus.ChainReader, header *types.Header, p
 	number := header.Number.Uint64()
 
 	// Don't waste time checking blocks from the future
+	// Future block 검증 안함
 	if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
 		return consensus.ErrFutureBlock
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
+	// 체크포이트 블록은 수혜자가 0명이어야 한다
 	checkpoint := (number % c.config.Epoch) == 0
 
 	// Check that the extra-data contains both the vanity and signature
+	// extra-data가 vanity와 서명을 포함하는지 검증
 	if len(header.Extra) < extraVanity {
 		return errMissingVanity
 	}
@@ -347,6 +356,7 @@ func (c *BSRR) verifyHeader(chain consensus.ChainReader, header *types.Header, p
 		return errInvalidCheckpointSigners
 	}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
+	//
 	if header.MixDigest != (common.Hash{}) {
 		return errInvalidMixDigest
 	}
@@ -371,6 +381,8 @@ func (c *BSRR) verifyHeader(chain consensus.ChainReader, header *types.Header, p
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
+//
+// verifyCascadeingFields는 독립 실행형태가 아닌 이전 헤더 배치에 종속되어있는 모든 헤더 필드를 검증한다.
 func (c *BSRR) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
@@ -418,6 +430,9 @@ func (c *BSRR) VerifySeal(chain consensus.ChainReader, header *types.Header) err
 	[Berith]
 	verifySeal method is necessary to implement Engine interface but not used.
 	The logic that verifies the signature contained in the header is in the Finalize method.
+
+	verifySeal은 Engine을 구현하기 위해 필요한 메서드 이지만 사용하지는 않는다.
+	헤더의 서명을 검증하는 로직은 Finalize 메서드에 있다.
 */
 func (c *BSRR) verifySeal(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported

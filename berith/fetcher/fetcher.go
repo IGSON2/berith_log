@@ -176,6 +176,9 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 
 // Start boots up the announcement based synchroniser, accepting and processing
 // hash notifications and block fetches until termination requested.
+//
+// Start는 알림 기반 싱크로나이저를 부팅하여 종료 요청이 있을 때까지 알림을 수락하고
+// 페치를 차단한다.
 func (f *Fetcher) Start() {
 	go f.loop()
 }
@@ -600,6 +603,8 @@ func (f *Fetcher) rescheduleComplete(complete *time.Timer) {
 
 // enqueue schedules a new future import operation, if the block to be imported
 // has not yet been seen.
+//
+// enqueue는 가져올 블록이 아직 표시되지 않은 경우 미래의 새 가져오기 작업을 예약한다.
 func (f *Fetcher) enqueue(peer string, block *types.Block) {
 	hash := block.Hash()
 

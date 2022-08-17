@@ -146,6 +146,7 @@ func (pm *ProtocolManager) syncer() {
 	for {
 		select {
 		case <-pm.newPeerCh:
+			fmt.Println("ProtocolManager.syncer() / pm.newPeerCh 데이터 수신")
 			// Make sure we have peers to select from, then sync
 			if pm.peers.Len() < minDesiredPeerCount {
 				break

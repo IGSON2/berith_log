@@ -508,8 +508,11 @@ func (bc *BlockChain) ExportN(w io.Writer, first uint64, last uint64) error {
 // header and the head fast sync block to this very same block if they are older
 // or if they are on a different side chain.
 //
+//insert는 새 헤드 블록을 현재 블록체인에 주입한다.
+//
 // Note, this function assumes that the `mu` mutex is held!
 func (bc *BlockChain) insert(block *types.Block) {
+	fmt.Println("Blockchain.insert() 호출")
 	// If the block is on a side chain or an unknown one, force other heads onto it too
 	updateHeads := rawdb.ReadCanonicalHash(bc.db, block.NumberU64()) != block.Hash()
 
@@ -1077,18 +1080,24 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	bc.wg.Done()
 
 	bc.PostChainEvents(events, logs)
+	fmt.Println("blockcain.go 1080 / BlockChain.PostchainEvents() 호출")
 
 	return n, err
 }
 
 // insertChain is the internals implementation of insertChain, which assumes that
 // 1) chains are contiguous, and 2) The chain mutex is held.
+// insertChain은 체인이 근접해있는지, 체인 뮤텍스가 고정되어있는지 추정한다.
 //
 // This method is split out so that import batches that require re-injecting
 // historical blocks can do so without releasing the lock, which could lead to
 // racey behaviour. If a sidechain import is in progress, and the historic state
 // is imported, but then new canon-head is added before the actual sidechain
 // completes, then the historic state could be pruned again
+//
+// 이 메서드는 과거 블록의 재 주입을 요청하는 임포트 배치가 lock을 해제할 필요가 없도록 분리되어 있다.
+// 사이드체인이 불러와지면 과거 state를 가져오지만, 실제 사이드체인이 완료되기 전에 새로운 캐논해드가 추가되면
+// 과거 state는 다시 제거될 수 있다.
 func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []interface{}, []*types.Log, error) {
 	// If the chain is terminating, don't even bother starting u
 	if atomic.LoadInt32(&bc.procInterrupt) == 1 {
@@ -1506,18 +1515,15 @@ func (bc *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
 	if logs != nil {
 		bc.logsFeed.Send(logs)
 	}
-	fmt.Print(" BlockChain.PostChainEvent() / event : ")
+	fmt.Print(" BlockChain.PostChainEvent() / events : ", events)
 	for _, event := range events {
 		switch ev := event.(type) {
 		case ChainEvent:
 			bc.chainFeed.Send(ev)
-			fmt.Println(ev)
 		case ChainHeadEvent:
 			bc.chainHeadFeed.Send(ev)
-			fmt.Println(ev)
 		case ChainSideEvent:
 			bc.chainSideFeed.Send(ev)
-			fmt.Println(ev)
 		}
 	}
 }

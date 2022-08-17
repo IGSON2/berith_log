@@ -69,6 +69,8 @@ type Engine interface {
 	// concurrently. The method returns a quit channel to abort the operations and
 	// a results channel to retrieve the async verifications (the order is that of
 	// the input slice).
+	// Verifyheaders는 VerifyHeader와 비슷해 보이지만, 한 묶음의 헤더를 동시에 검증한다.
+	// 메서드는 작업을 중단시키는 종료채널과 비동기 검증을 검색하기 위한 결과채널을 반환한다.
 	VerifyHeaders(chain ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error)
 
 	// VerifyUncles verifies that the given block's uncles conform to the consensus

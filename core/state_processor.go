@@ -55,6 +55,9 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // the transaction messages using the statedb and applying any rewards to both
 // the processor (coinbase) and any included uncles.
 //
+// Process는 statedb를 사용하는 트랜잭션 메세지의 Berith 규칙에 따라 state를 변경하고
+// 프로세서와 포함된 엉클블록 모두에게 보상을 적용한다.
+//
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
@@ -82,6 +85,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	_, err := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles(), receipts)
+	fmt.Println("StateProcessor.Process - engine.Finalize() 호출")
 
 	return receipts, allLogs, *usedGas, err
 }

@@ -994,6 +994,10 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 // promoteExecutables moves transactions that have become processable from the
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
+//
+// promoteExcutables는 처리할 수 있게 된 트랜잭션을 미래 대기열에서
+// 보류 중인 트랜잭션 집합으로 이동시킨다. 이 프로세스 중에 무효화된
+// 모든 트랜잭션(Low Nonce, Low Balance)은 삭제된다.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	fmt.Println("core.go 990 / TxPool.promoteExecutables() 호출")
 	// Track the promoted transactions to broadcast them at once
@@ -1007,12 +1011,14 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 	}
 	// Iterate over all accounts and promote any executable transactions
+	// 모든 어카운트에 걸쳐 반복하고 처리가능한 어떤 트랜잭션이든 승격시킨다.
 	for _, addr := range accounts {
 		list := pool.queue[addr]
 		if list == nil {
 			continue // Just in case someone calls with a non existing account
 		}
 		// Drop all transactions that are deemed too old (low nonce)
+		// 너무 오래된 것으로 간주되는 모든 트랜잭션 삭제
 		for _, tx := range list.Forward(pool.currentState.GetNonce(addr)) {
 			hash := tx.Hash()
 			log.Trace("Removed old queued transaction", "hash", hash)
@@ -1020,6 +1026,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas)
+		// 오버페이한 트랜잭션 삭제
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
@@ -1029,6 +1036,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			queuedNofundsCounter.Inc(1)
 		}
 		// Gather all executable transactions and promote them
+		// 처리가능한 트랜잭션을 모으고 승격시킨다
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
@@ -1054,6 +1062,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
 		go pool.txFeed.Send(NewTxsEvent{promoted})
+		fmt.Println("TxPool.promoteExcutables / Send(NewTxsEvent)")
 	}
 	// If the pending limit is overflown, start equalizing allowances
 	pending := uint64(0)
