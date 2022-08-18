@@ -23,7 +23,7 @@ func (q *Queue) setQueueAsCandidates(candidateCount int) *Queue {
 }
 
 func (q *Queue) enqueue(r Range) error {
-	if (q.rear+1)%q.size == q.front {
+	if (q.rear+1)%q.size == q.front { //index rear와 front사이의 공간이 size만큼 되는가?
 		return errors.New("Queue is full")
 	}
 
