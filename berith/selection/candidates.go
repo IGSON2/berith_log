@@ -3,10 +3,11 @@ package selection
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/BerithFoundation/berith-chain/common"
-	"github.com/BerithFoundation/berith-chain/params"
 	"math/big"
 	"math/rand"
+
+	"github.com/BerithFoundation/berith-chain/common"
+	"github.com/BerithFoundation/berith-chain/params"
 )
 
 const (
@@ -51,8 +52,12 @@ func (cs *Candidates) Add(c Candidate) {
 /*
 [Berith]
 The block constructor is selected and the result is returned in VoteResults.
+
+대부분 BIP3 이후 블록이라 호출될일이 많아보이진 않음.
+로컬 테스트 시 genesis.json으로 포크 위치 설정가능
 */
 func (cs *Candidates) selectBlockCreator(config *params.ChainConfig, number uint64) VoteResults {
+	fmt.Println("Candidates.selectBlockCreator () 호출 / Canditates : ", cs.selections)
 	candidateCount := len(cs.selections)
 	queue := new(Queue).setQueueAsCandidates(candidateCount)
 	result := make(VoteResults)
@@ -95,6 +100,7 @@ func (cs *Candidates) selectBlockCreator(config *params.ChainConfig, number uint
 The block constructor is selected and the result is returned in VoteResults.
 */
 func (cs *Candidates) selectBIP3BlockCreator(config *params.ChainConfig, number uint64) VoteResults {
+	fmt.Println("Candidates.selectBIP3BlockCreator () 호출 / Canditates : ", cs.selections)
 	result := make(VoteResults)
 
 	currentElectScore := maxElectScore
@@ -106,7 +112,7 @@ func (cs *Candidates) selectBIP3BlockCreator(config *params.ChainConfig, number 
 
 	for len(cs.selections) > 0 {
 		// The random number below the total elected point is taken and used as the number to select the elected person.
-		electedNumber := uint64(rand.Int63n(int64(cs.total)))
+		electedNumber := uint64(rand.Int63n(int64(cs.total))) // 산출되는 랜덤값에 따라 결과가 달라짐
 
 		// Search for candidates corresponding to electedNumber by binary search.
 		var chosen int
@@ -116,7 +122,7 @@ func (cs *Candidates) selectBIP3BlockCreator(config *params.ChainConfig, number 
 			mid := (start + end) / 2
 			startElectRange := uint64(0)
 			if mid > 0 {
-				startElectRange = cs.selections[mid-1].val
+				startElectRange = cs.selections[mid-1].val // 포인트가 높을수록 넓은 범위를 차지하게되므로 지목될 확률이 높아짐
 			}
 			endElectRange := cs.selections[mid].val
 
@@ -151,7 +157,7 @@ func (cs *Candidates) selectBIP3BlockCreator(config *params.ChainConfig, number 
 		cs.selections = cs.selections[:len(cs.selections)-1]
 		cs.total -= out.point
 	}
-	return result
+	return result //추첨된 순서를 기준으로 랭크 부여후 맵 객체로 반환
 }
 
 /*

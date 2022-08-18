@@ -1,8 +1,9 @@
 package selection
 
 import (
-	"github.com/BerithFoundation/berith-chain/common"
 	"math/rand"
+
+	"github.com/BerithFoundation/berith-chain/common"
 )
 
 type Range struct {
@@ -17,7 +18,7 @@ type Range struct {
 BinarySearch the Random value in width units.
 */
 func (r Range) binarySearch(q *Queue, cs *Candidates) common.Address {
-	if r.end-r.start <= 1 {
+	if r.end-r.start <= 1 { //이전 레인지의 결과 중 start와 end 값의 차이가 1 이하라는 뜻은 탐색이 필요 없다는 것
 		return cs.selections[r.start].address
 	}
 
