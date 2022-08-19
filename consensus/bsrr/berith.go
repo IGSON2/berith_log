@@ -447,6 +447,7 @@ func (c *BSRR) verifySeal(chain consensus.ChainReader, header *types.Header, par
 // Prepare implements consensus.Engine, preparing all the consensus fields of the
 // header for running the transactions on top.
 func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error {
+	fmt.Println("BSRR.Prepare() 호출 Header : ", header.Number)
 	header.Nonce = types.BlockNonce{}
 	number := header.Number.Uint64()
 
@@ -639,6 +640,7 @@ func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results cha
 		select {
 		case <-stop:
 			return
+			// rank만큼 딜레이 시간이 늘어난다.
 		case <-time.After(delay):
 		}
 

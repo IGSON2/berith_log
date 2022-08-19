@@ -195,7 +195,7 @@ func (p *Peer) Log() log.Logger {
 }
 
 func (p *Peer) run() (remoteRequested bool, err error) {
-	fmt.Println("Peer.run() 호출, Enode : ", p.Info().Enode)
+	fmt.Println("Peer.run() 호출, Enode : ", p.Info().Name)
 	var (
 		writeStart = make(chan struct{}, 1)
 		writeErr   = make(chan error, 1)

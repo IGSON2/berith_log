@@ -579,26 +579,34 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
+//
+// validateTx는 트랜잭션이 합의에 따라 검증 되는지 아닌지 확인한다.
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
+	// Heuristic limit으로, DOS 공격으로부터 보호하기 위해 32KB가 넘는 transactions를 반려한다
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData
 	}
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
+	// 트랜잭션은 RLP 디코딩을 할 수 없는 음수로 반환될 수 없다. 만약 RPC를 이용해
+	// 트랜잭션을 생성한다면 음수가 반환될 수도 있다.
 	if tx.Value().Sign() < 0 {
 		return ErrNegativeValue
 	}
 	// Ensure the transaction doesn't exceed the current block limit gas.
+	// 트랜잭션의 현재 블럭의 가스 리밋을 초과할 수 없다는 것을 보증한다.
 	if pool.currentMaxGas < tx.Gas() {
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
+	// 트랜잭션이 제대로 서명되었는지 보증한다.
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
+	//
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
 	if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
 		return ErrUnderpriced
@@ -691,15 +699,21 @@ func CheckStakeBalanceAmount(totalStakingAmount, maximum *big.Int) bool {
 // If a newly added transaction is marked as local, its sending account will be
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
+//
+// add는 향후 보류 중인 승격 및 실행을 위해 트랜잭션을 검증하고 취소할 수 없는 대기열에 삽입한다.
+// 트랜잭션이 이미 보류 중이거나 대기 중인 트랜잭션을 대체할 경우 이전 트랜잭션을 덮어쓰고 이를
+// 반환하여 외부 코드가 불필요하게 프로모트를 호출하지 않습니다.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	fmt.Println("core.go 687 / TxPool.add() 호출")
 	// If the transaction is already known, discard it
+	// 트랜잭션이 이미 알고있는것 이라면 무시한다.
 	hash := tx.Hash()
 	if pool.all.Get(hash) != nil {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
 	// If the transaction fails basic validation, discard it
+	// 일반적인 트랜잭션 검증에 실패한다면 무시한다.
 	if err := pool.validateTx(tx, local); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		invalidTxCounter.Inc(1)

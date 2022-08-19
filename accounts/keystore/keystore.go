@@ -121,6 +121,7 @@ func (ks *KeyStore) init(keydir string) {
 func (ks *KeyStore) Wallets() []accounts.Wallet {
 	// Make sure the list of wallets is in sync with the account cache
 	ks.refreshWallets()
+	fmt.Println("keystore.refreshWallets() 호출")
 
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -133,7 +134,6 @@ func (ks *KeyStore) Wallets() []accounts.Wallet {
 // refreshWallets retrieves the current account list and based on that does any
 // necessary wallet refreshes.
 func (ks *KeyStore) refreshWallets() {
-	fmt.Println("keystore.go 136 / refreshWallets() 호출")
 	// Retrieve the current list of accounts
 	ks.mu.Lock()
 	accs := ks.cache.accounts()

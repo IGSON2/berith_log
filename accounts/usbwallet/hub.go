@@ -100,6 +100,7 @@ func newHub(scheme string, vendorID uint16, productIDs []uint16, usageID uint16,
 func (hub *Hub) Wallets() []accounts.Wallet {
 	// Make sure the list of wallets is up to date
 	hub.refreshWallets()
+	fmt.Println("refreshWallets() 호출")
 
 	hub.stateLock.RLock()
 	defer hub.stateLock.RUnlock()
@@ -114,7 +115,6 @@ func (hub *Hub) Wallets() []accounts.Wallet {
 //
 // refreshWallets은 머신에 부착된 USB 디바이스를 스캔하고 디바이스에 저장된 지갑들을 기반으로 지갑 목록을 업데이트한다.
 func (hub *Hub) refreshWallets() {
-	fmt.Println("usbWallet.go 115 / refreshWallets() 호출")
 	// Don't scan the USB like crazy it the user fetches wallets in a loop
 	hub.stateLock.RLock()
 	elapsed := time.Since(hub.refreshed)
