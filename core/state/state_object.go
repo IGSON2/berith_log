@@ -62,9 +62,9 @@ func (self Storage) Copy() Storage {
 // Finally, call CommitTrie to write the modified storage trie into a database.
 // Account values can be accessed and modified through the object.
 //
-// stateObjecct는 수정중인 베리드 계좌를 대변한다
+// stateObjecct는 수정중인 베리드 계정을 대변한다
 // 먼저 state object를 얻어야한다.
-// 계좌값은 객체를 통해 접근되고 수정될 수 있다.
+// 계정값은 객체를 통해 접근되고 수정될 수 있다.
 // 마지막으로 CommitTrie를 호출하여 수정된 스토리지 트리를 DB에 기록한다.
 type stateObject struct {
 	address  common.Address

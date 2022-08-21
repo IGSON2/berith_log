@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
+//go:build !nacl && !js && !nocgo
 // +build !nacl,!js,!nocgo
 
 package crypto
@@ -47,11 +48,18 @@ func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
 //
 // This function is susceptible to chosen plaintext attacks that can leak
 // information about the private key that is used for signing. Callers must
-// be aware that the given hash cannot be chosen by an adversery. Common
+// be aware that the given hash cannot be chosen by an adversary. Common
 // solution is to hash any input before calculating the signature.
 //
 // The produced signature is in the [R || S || V] format where V is 0 or 1.
+//
+// Sign은 ECDSA 서명을 계산한다.
+// 이 함수는 서명에 이용되는 개인키에 대한 정보를 유출시킬 수 있는
+// 선택된 비 암호화 데이터 공격에 취약하다. 호출자들은 주어진 해시를
+// 적대자가 선택할 수 없다는 것을 알아야 한다. 일반적인 해결법은
+// 서명을 계산하기 전 아무 인풋이나 해시하는 것이다.
 func Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
+	//	  BlockHeader, unlockedKey.PrivateKey
 	if len(hash) != 32 {
 		return nil, fmt.Errorf("hash is required to be exactly 32 bytes (%d)", len(hash))
 	}

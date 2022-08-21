@@ -26,6 +26,9 @@ import (
 
 // keystoreWallet implements the accounts.Wallet interface for the original
 // keystore.
+//
+// keystoreWallet은 accounts.Wallet 인터페이스를 구현하며,
+// original keystore의 인터페이스이다.
 type keystoreWallet struct {
 	account  accounts.Account // Single account contained in this wallet
 	keystore *KeyStore        // Keystore where the account originates from
@@ -82,6 +85,12 @@ func (w *keystoreWallet) SelfDerive(base accounts.DerivationPath, chain ethereum
 // the given account. If the wallet does not wrap this particular account, an
 // error is returned to avoid account leakage (even though in theory we may be
 // able to sign via our shared keystore backend).
+//
+// SighHash는 accounts.Wallet 인터페이스를 구현한다. 주어진 해시에 주어진 계정을 이용해
+// 서명을 시도한다. 만약 월렛이 이 특정한 계정을 포함하지 않으면 계정 유출을 방지하기 위해
+// 에러를 반환한다.
+// Seal 에서 BSRR의 SignFn의 형태로 호출되는데 블록 헤더의 해시와 berithBase 주소가
+// 인자로 들어온다.
 func (w *keystoreWallet) SignHash(account accounts.Account, hash []byte) ([]byte, error) {
 	// Make sure the requested account is contained within
 	if account.Address != w.account.Address {

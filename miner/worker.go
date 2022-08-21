@@ -78,6 +78,7 @@ const (
 )
 
 // environment is the worker's current environment and holds all of the current state information.
+// environment는 작업자의 현재 환경이며 모든 현재 상태 정보를 보유하고 있다.
 type environment struct {
 	signer types.Signer
 
@@ -108,6 +109,8 @@ const (
 )
 
 // newWorkReq represents a request for new sealing work submitting with relative interrupt notifier.
+//
+// newWorkReq는 상대적인 중단 신호와 함께 제출하는 새로운 실링 작업에 대한 요청을 나타낸다.
 type newWorkReq struct {
 	interrupt *int32
 	noempty   bool
@@ -610,14 +613,17 @@ func (w *worker) resultLoop() {
 }
 
 // makeCurrent creates a new environment for the current cycle.
+// makeCurrent는 현재 사이클을 위한 새로운 환경을 만든다.
+// commitNewWork로 부터 parent가 될 현재 블록과 만들어지고 있는 새로운 헤더를 전달받는다.
 func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 	state, err := w.chain.StateAt(parent.Root())
 	if err != nil {
 		return err
 	}
 	env := &environment{
-		signer:    types.NewEIP155Signer(w.config.ChainID),
-		state:     state,
+		signer: types.NewEIP155Signer(w.config.ChainID),
+		state:  state,
+		//thread unsafeset
 		ancestors: mapset.NewSet(),
 		family:    mapset.NewSet(),
 		uncles:    mapset.NewSet(),
@@ -625,15 +631,20 @@ func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
+	// [Current - (n-1) 블록 , Current 블록]
 	for _, ancestor := range w.chain.GetBlocksFromHash(parent.Hash(), 7) {
 		for _, uncle := range ancestor.Uncles() {
+			// threadUnsfaSet[uncle.Hash] = struct{}
+			// uncle 무효 확인을 위해 사용된다.
 			env.family.Add(uncle.Hash())
 		}
 		env.family.Add(ancestor.Hash())
+		// 엉클블록의 부모블록 유효성 검증에 사용
 		env.ancestors.Add(ancestor.Hash())
 	}
 
 	// Keep track of transactions which return errors so they can be removed
+	// 오류를 반환하는 트랜잭션을 추적하여 오류를 제거할 수 있도록 한다.
 	env.tcount = 0
 	w.current = env
 	return nil
@@ -828,6 +839,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	defer w.mu.RUnlock()
 
 	tstart := time.Now()
+	// 새 블록의 부모 블록이 될 현 블록
 	parent := w.chain.CurrentBlock()
 
 	if parent.Time().Cmp(new(big.Int).SetInt64(timestamp)) >= 0 {
@@ -841,6 +853,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 
 	num := parent.Number()
+	// 새 블록의 헤더 초깃값 세팅
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
@@ -849,6 +862,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		Time:       big.NewInt(timestamp),
 	}
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
+	// 합의엔진이 실행중일 경우에만 코인베이스를 세팅한다.
 	if w.isRunning() {
 		if w.coinbase == (common.Address{}) {
 			log.Error("Refusing to mine without berithbase")
@@ -861,6 +875,8 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		return
 	}
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
+	// 만약 DAO 하드포크를 고려한다면 추가 데이터를 재정의할지 확인한다.
+	// 그러나 Berith는 MainnetChainConfig에서 DAOForkBlock을 nil로 설정하기 때문에 건너뛴다.
 	if daoBlock := w.config.DAOForkBlock; daoBlock != nil {
 		// Check whether the block is among the fork extra-override range
 		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
@@ -880,11 +896,13 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		return
 	}
 	// Create the current work task and check any fork transitions needed
+	// 현재 작업을 생성하고 필요한 포크 전환을 체크한다.
 	env := w.current
 	if w.config.DAOForkSupport && w.config.DAOForkBlock != nil && w.config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(env.state)
 	}
 	// Accumulate the uncles for the current block
+	// 현재 블럭의 엉클블럭을 모은다.
 	uncles := make([]*types.Header, 0, 2)
 	commitUncles := func(blocks map[common.Hash]*types.Block) {
 		fmt.Println("commitNewWork() 내부 commitUncles() 호출")
@@ -913,6 +931,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	if !noempty {
 		// Create an empty block based on temporary copied state for sealing in advance without waiting block
 		// execution finished.
+		// 블럭 확정 처리를 기다리지 않고 미리 포장을 하기 위해 임시로 복제된 state를 기반으로 빈 블럭을 생성한다.
 		w.commit(uncles, nil, false, tstart)
 	}
 

@@ -398,24 +398,26 @@ func (s *Berith) StartMining(threads int) error {
 		s.txPool.SetGasPrice(price)
 
 		// Configure the local mining address
-		eb, err := s.Berithbase()
+		berithBase, err := s.Berithbase()
 		if err != nil {
 			log.Error("Cannot start mining without berithbase", "err", err)
 			return fmt.Errorf("berithbase missing: %v", err)
 		}
 		if bsrr, ok := s.engine.(*bsrr.BSRR); ok {
-			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+			// BerithBase의 지갑 탐색
+			wallet, err := s.accountManager.Find(accounts.Account{Address: berithBase})
 			if wallet == nil || err != nil {
 				log.Error("Berithbase account unavailable locally", "err", err)
 				return fmt.Errorf("signer missing: %v", err)
 			}
-			bsrr.Authorize(eb, wallet.SignHash)
+			// wallet.SighHash는 결국 keystore.SignHash()이다.
+			bsrr.Authorize(berithBase, wallet.SignHash)
 		}
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 
-		go s.miner.Start(eb)
+		go s.miner.Start(berithBase)
 	}
 	return nil
 }

@@ -92,6 +92,8 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 
 // Signer encapsulates transaction signature handling. Note that this interface is not a
 // stable API and may change at any time to accommodate new protocol rules.
+//
+// Signer는 트랜잭션 서명 처리를 캡슐화한다.
 type Signer interface {
 	// Sender returns the sender address of the transaction.
 	Sender(tx *Transaction) (common.Address, error)
@@ -105,6 +107,7 @@ type Signer interface {
 }
 
 // EIP155Transaction implements Signer using the EIP155 rules.
+// EIP155 rules를 사용하여 Signer 인터페이스를 구현하는 객체
 type EIP155Signer struct {
 	chainId, chainIdMul *big.Int
 }

@@ -446,6 +446,8 @@ func (c *BSRR) verifySeal(chain consensus.ChainReader, header *types.Header, par
 
 // Prepare implements consensus.Engine, preparing all the consensus fields of the
 // header for running the transactions on top.
+// 트랜잭션을 실행시키기 위해 헤더의 모든 합의 필드를 준비한다.
+// commitNewWork에서 먼저 일부 필드가 초기화 된 다음 블록의 헤더를 인자로 받는다.
 func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	fmt.Println("BSRR.Prepare() 호출 Header : ", header.Number)
 	header.Nonce = types.BlockNonce{}
@@ -462,6 +464,10 @@ func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error 
 	}
 
 	// Set the correct difficulty and nonce
+	// 타겟블록에서 berithBase의 스코어와 순위를 반환.
+	// signer는 1위여서 signer가 된게 아닌가?
+	// berithBase는 노드에서 지정한 채굴자이다. 여러 노드들 중 현재 노드의 채굴자는
+	// 몇위인지, 스코어는 몇점인지 알아내는 것이다.
 	diff, rank := c.calcDifficultyAndRank(c.signer, chain, 0, target)
 	if rank < 1 {
 		return errUnauthorizedSigner
@@ -569,6 +575,9 @@ func (c *BSRR) Finalize(chain consensus.ChainReader, header *types.Header, state
 
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
+//
+// Authorize는 새 블록을 생성하기 위해 개인키를 합의엔진에 추가한다.
+// StartMining 에서 berithBase의 주소와 서명을 받아 인증한다.
 func (c *BSRR) Authorize(signer common.Address, signFn SignerFn) {
 	fmt.Println("signer : ", signer)
 	c.lock.Lock()
@@ -655,10 +664,13 @@ func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results cha
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
-// that a new block should have based on the previous blocks in the chain and the
-// current signer.
+// that a new block should have ( based on the previous blocks in the chain and the
+// current signer. )
+// CalcDifficulty는 난이도 조정 알고리즘이다. 이 함수는 체인의 이전 블록들과 현재 서명자를 기준으로
+// 새 블록이 가져야 하는 난이도를 반환한다.
+//
+// 그러나 아직 이 함수가 실행될 로직은 구현되어 있지 않음.
 func (c *BSRR) CalcDifficulty(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	//target, exist := c.getAncestor(chain, int64(c.config.Epoch), parent)
 	target, exist := c.getStakeTargetBlock(chain, parent)
 	if !exist {
 		return big.NewInt(0)
@@ -671,6 +683,7 @@ func (c *BSRR) getAncestor(chain consensus.ChainReader, n int64, header *types.H
 	target := header
 	targetNumber := new(big.Int).Sub(header.Number, big.NewInt(n))
 	for target != nil && target.Number.Cmp(big.NewInt(0)) > 0 && target.Number.Cmp(targetNumber) > 0 {
+		// target이 targetNumber보다 같아지면 break, 즉 targetNumber 높이의 헤더를 구하기 위함
 		target = chain.GetHeader(target.ParentHash, target.Number.Uint64()-1)
 	}
 
@@ -699,7 +712,9 @@ func (c *BSRR) getStakeTargetBlock(chain consensus.ChainReader, parent *types.He
 	blockNumber := parent.Number.Uint64()
 	d := blockNumber / c.config.Epoch
 
+	// 블록 높이가 360 이상이면 여기로
 	if d > 1 {
+		// 부모 블록의 1에포크 전 블록헤더와 블록과 State 존재 유무을 구한다. (current - (1+epoch))
 		return c.getAncestor(chain, int64(c.config.Epoch), parent)
 	}
 
@@ -727,6 +742,10 @@ func (c *BSRR) SealHash(header *types.Header) common.Hash {
 Method to return the difficulty and rank when creating a block for a given address
 1) [0, epoch] -> After extraction from extra data of genesis block ==> return (1234,1) or (0, -1)
 2) [epoch+1, ~) -> Returns the staking list based on the target block (diff, rank) ==> return (diff,rank) or (0, -1)
+
+블록을 생성할 때 주어진 주소의 난이도와 랭크를 반환하는 함수이다.
+[0, epoch] ->  제네시스 블록의 엑스트라 데이터로부터의 추출(1234,1)
+[epoch+1, ~] -> 타겟블록의 스테이킹 리스트 반환
 */
 func (c *BSRR) calcDifficultyAndRank(signer common.Address, chain consensus.ChainReader, time uint64, target *types.Header) (*big.Int, int) {
 	// extract diff and rank from genesis's extra data
@@ -749,6 +768,7 @@ func (c *BSRR) calcDifficultyAndRank(signer common.Address, chain consensus.Chai
 
 	results := selection.SelectBlockCreator(chain.Config(), target.Number.Uint64(), target.Hash(), stks, stateDB)
 
+	//후보자가 10000명 이하라면, ForkFactor가 1.0이기 때문에 그대로 반환됨
 	max := c.getMaxMiningCandidates(len(results))
 
 	if results[signer].Rank > max {

@@ -55,6 +55,11 @@ var (
 // The caller is responsible for ensuring that msg cannot be chosen
 // directly by an attacker. It is usually preferable to use a cryptographic
 // hash function on any input before handing it to this function.
+//
+// SignHash는 주어진 해시의 ECDSA 서명을 계산한다.
+// 생성된 서명은 [R || S || V] 형식이며, 여기서 V는 0 또는 1이다.
+// 호출자는 공격자에 의해 직접적으로 메시지가 선택될 수 없도록 할 책임이 있다.
+// 일반적으로 이 함수에 전달하기 전에 모든 입력에 암호화 해시 함수를 사용하는 것이 바람직하다.
 func Sign(msg []byte, seckey []byte) ([]byte, error) {
 	if len(msg) != 32 {
 		return nil, ErrInvalidMsgLen

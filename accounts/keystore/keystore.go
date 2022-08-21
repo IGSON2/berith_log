@@ -257,7 +257,11 @@ func (ks *KeyStore) Delete(a accounts.Account, passphrase string) error {
 
 // SignHash calculates a ECDSA signature for the given hash. The produced
 // signature is in the [R || S || V] format where V is 0 or 1.
+//
+// SignHash는 주어진 해시의 ECDSA 서명을 계산한다.
+// 생성된 서명은 [R || S || V] 형식이며, 여기서 V는 0 또는 1이다.
 func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
+	//							  berithBase   ,  BlockHeader
 	// Look up the key to sign with and abort if it cannot be found
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
