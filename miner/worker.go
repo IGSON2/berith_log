@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -352,12 +353,13 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 	for {
 		select {
 		case <-w.startCh:
-			fmt.Println("worker.startCh 개방 후 하위 로직 실행")
+			fmt.Println("NewWorkLoop() / worker.startCh 개방 후 하위 로직 실행")
 			clearPending(w.chain.CurrentBlock().NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
 
 		case head := <-w.chainHeadCh:
+			fmt.Println("NewWorkLoop() / worker.chainHeadCh 개방 후 하위 로직 실행")
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
@@ -413,6 +415,7 @@ func (w *worker) mainLoop() {
 			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
 
 		case ev := <-w.chainSideCh:
+			fmt.Println("worker.mainLop() / worker.chainSideCh 개방 후 하위 로직 실행")
 			// Short circuit for duplicate side blocks
 			if _, exist := w.localUncles[ev.Block.Hash()]; exist {
 				continue
@@ -507,7 +510,8 @@ func (w *worker) taskLoop() {
 	for {
 		select {
 		case task := <-w.taskCh:
-			fmt.Println("worker.taskLoop() / worker.taskCh 개방 후 하위 로직 실행")
+			fmt.Println("worker.taskLoop() / worker.taskCh 개방 후 하위 로직 실행, Task : ")
+			fmt.Printf("task.block : %v\ntask.receipts : %v\ntask.state : %v\n", task.block, task.receipts, task.state)
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
 			}
@@ -545,6 +549,7 @@ func (w *worker) resultLoop() {
 		select {
 		case block := <-w.resultCh:
 			fmt.Println("worker.resultLoop() / worker.resultCh 개방 후 하위 로직 실행")
+			fmt.Printf("BlockHeader : %v\nUncles : %v\nTransactions : %v\n", block.Header().Hash(), block.Uncles(), block.Transactions())
 			// Short circuit when receiving empty result.
 			if block == nil {
 				continue
@@ -590,17 +595,17 @@ func (w *worker) resultLoop() {
 
 			// Broadcast the block and announce chain insertion event
 			w.mux.Post(core.NewMinedBlockEvent{Block: block})
-			fmt.Print("worker.mux.Post() NewMinedBlockEvent 전송")
 
 			var events []interface{}
 			switch stat {
 			case core.CanonStatTy:
+				// 왜 txpool.chainEventCh만 Read 할 수 있는걸까
 				events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
 				events = append(events, core.ChainHeadEvent{Block: block})
 			case core.SideStatTy:
 				events = append(events, core.ChainSideEvent{Block: block})
 			}
-			w.chain.PostChainEvents(events, logs) //211에서 구독했던 ChainHeadEvent POST
+			w.chain.PostChainEvents(events, logs) //워커의 Chain * Event가 아니고 w.chain의 이벤트.
 			fmt.Println("ResultlLoop() 내부 worker.chain.PostChainEvent() 호출")
 
 			// Insert the block into the set of pending ones to resultLoop for confirmations
@@ -634,8 +639,8 @@ func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 	// [Current - (n-1) 블록 , Current 블록]
 	for _, ancestor := range w.chain.GetBlocksFromHash(parent.Hash(), 7) {
 		for _, uncle := range ancestor.Uncles() {
-			// threadUnsfaSet[uncle.Hash] = struct{}
-			// uncle 무효 확인을 위해 사용된다.
+			// threadUnsafeSet[uncle.Hash] = struct{}
+			// 엉클블록의 무효 확인을 위해 사용된다.
 			env.family.Add(uncle.Hash())
 		}
 		env.family.Add(ancestor.Hash())
@@ -672,6 +677,7 @@ func (w *worker) commitUncle(env *environment, uncle *types.Header) error {
 // updateSnapshot updates pending snapshot block and state.
 // Note this function assumes the current variable is thread safe.
 func (w *worker) updateSnapshot() {
+	fmt.Println("worker.updateSnapshot() 호출")
 	w.snapshotMu.Lock()
 	defer w.snapshotMu.Unlock()
 
@@ -698,7 +704,7 @@ func (w *worker) updateSnapshot() {
 		uncles,
 		w.current.receipts,
 	)
-
+	fmt.Printf("snapshotBlock\nTx : %v\nUncle : %v\n", w.snapshotBlock.Body().Transactions, w.snapshotBlock.Body().Uncles)
 	w.snapshotState = w.current.state.Copy()
 }
 
@@ -713,6 +719,7 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	w.current.txs = append(w.current.txs, tx)
 	w.current.receipts = append(w.current.receipts, receipt)
 
+	fmt.Println("Transaction applied.\n Receipt : ", w.current.receipts, "\n tx : ", w.current.txs)
 	return receipt.Logs, nil
 }
 
@@ -758,6 +765,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		// Retrieve the next transaction and abort if all done
 		tx := txs.Peek()
 		if tx == nil {
+			fmt.Println("commitTransactions : tx is nil !")
 			break
 		}
 		// Error may be ignored here. The error has already been checked
@@ -932,7 +940,10 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		// Create an empty block based on temporary copied state for sealing in advance without waiting block
 		// execution finished.
 		// 블럭 확정 처리를 기다리지 않고 미리 포장을 하기 위해 임시로 복제된 state를 기반으로 빈 블럭을 생성한다.
+		fmt.Println("빈 블럭 commit")
 		w.commit(uncles, nil, false, tstart)
+		time.Sleep(1 * time.Minute)
+		fmt.Println("Restart !", strings.Repeat("=", 50))
 	}
 
 	// Fill the block with all available pending transactions.
@@ -943,6 +954,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 	// Short circuit if there is no available pending transactions
 	if len(pending) == 0 {
+		log.Warn("Pending length is 0")
 		w.updateSnapshot()
 		return
 	}
@@ -954,6 +966,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 			localTxs[account] = txs
 		}
 	}
+	fmt.Printf("LocalTxs : %d, ReoteTxs : %d\n", len(localTxs), len(remoteTxs))
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
@@ -966,6 +979,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 			return
 		}
 	}
+
 	w.commit(uncles, w.fullTaskHook, true, tstart)
 }
 

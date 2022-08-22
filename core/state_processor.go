@@ -62,6 +62,7 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
 func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
+	fmt.Println("StateProcessor.Process() 호출")
 	var (
 		receipts types.Receipts
 		usedGas  = new(uint64)
@@ -96,7 +97,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // indicating the block was invalid.
 //
 // ApplyTransaction은 주어진 state DB로 트랜잭션 적용을 시도하고 해당 환경으로 인풋 파라미터를 사용한다.
-// 트랜잭션에 대한 영수증을 반환 하는데, 사용된 가스와 트랜잭션 실패시 반환되는 에러등을 알 수 있다.
+// 트랜잭션에 대한 영수증을 반환하는데, 사용된 가스와 트랜잭션 실패시 반환되는 에러등을 알 수 있다.
 func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, uint64, error) {
 	fmt.Println("ApplyTransaction() 호출")
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))

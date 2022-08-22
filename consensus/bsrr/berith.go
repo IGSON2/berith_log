@@ -447,7 +447,7 @@ func (c *BSRR) verifySeal(chain consensus.ChainReader, header *types.Header, par
 // Prepare implements consensus.Engine, preparing all the consensus fields of the
 // header for running the transactions on top.
 // 트랜잭션을 실행시키기 위해 헤더의 모든 합의 필드를 준비한다.
-// commitNewWork에서 먼저 일부 필드가 초기화 된 다음 블록의 헤더를 인자로 받는다.
+// commitNewWork에서 먼저 일부 필드가 초기화 된 블록의 헤더를 인자로 받는다.
 func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	fmt.Println("BSRR.Prepare() 호출 Header : ", header.Number)
 	header.Nonce = types.BlockNonce{}
@@ -465,7 +465,6 @@ func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error 
 
 	// Set the correct difficulty and nonce
 	// 타겟블록에서 berithBase의 스코어와 순위를 반환.
-	// signer는 1위여서 signer가 된게 아닌가?
 	// berithBase는 노드에서 지정한 채굴자이다. 여러 노드들 중 현재 노드의 채굴자는
 	// 몇위인지, 스코어는 몇점인지 알아내는 것이다.
 	diff, rank := c.calcDifficultyAndRank(c.signer, chain, 0, target)
@@ -496,6 +495,9 @@ func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error 
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
+//
+// Finalize는 엉클 블록이 정해지지 않았는지 확인하고,
+// 블록 보상이 주어지지 않았는지 확인한 뒤, 최종 블록을 반환한다.
 func (c *BSRR) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	fmt.Println("BSRR.Finalize() 호출")
 	// [Berith] Retrieves the parent block's StakingList.

@@ -289,7 +289,7 @@ func (s *dialstate) taskDone(t task, now time.Time) {
 }
 
 func (t *dialTask) Do(srv *Server) {
-	fmt.Println("dialTask.Do() 호출")
+	// fmt.Println("dialTask.Do() 호출")
 	if t.dest.Incomplete() {
 		if !t.resolve(srv) {
 			return
@@ -347,7 +347,7 @@ type dialError struct {
 
 // dial performs the actual connection attempt.
 func (t *dialTask) dial(srv *Server, dest *enode.Node) error {
-	fmt.Println("dialTask.dial() 호출")
+	// fmt.Println("dialTask.dial() 호출")
 	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {
 		return &dialError{err}

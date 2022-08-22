@@ -17,7 +17,6 @@
 package berith
 
 import (
-	"fmt"
 	"math/rand"
 	"sync/atomic"
 	"time"
@@ -133,7 +132,7 @@ func (pm *ProtocolManager) txsyncLoop() {
 // syncer is responsible for periodically synchronising with the network, both
 // downloading hashes and blocks as well as handling the announcement handler.
 func (pm *ProtocolManager) syncer() {
-	fmt.Println("ProtocolManager.syncer() 호출")
+	// fmt.Println("ProtocolManager.syncer() 호출")
 	// Start and ensure cleanup of sync mechanisms
 	pm.fetcher.Start()
 	defer pm.fetcher.Stop()
@@ -146,7 +145,7 @@ func (pm *ProtocolManager) syncer() {
 	for {
 		select {
 		case <-pm.newPeerCh:
-			fmt.Println("ProtocolManager.syncer() / pm.newPeerCh 데이터 수신")
+			// fmt.Println("ProtocolManager.syncer() / pm.newPeerCh 데이터 수신")
 			// Make sure we have peers to select from, then sync
 			if pm.peers.Len() < minDesiredPeerCount {
 				break
@@ -165,7 +164,7 @@ func (pm *ProtocolManager) syncer() {
 
 // synchronise tries to sync up our local block chain with a remote peer.
 func (pm *ProtocolManager) synchronise(peer *peer) {
-	fmt.Println("ProtocolManager.Synchronise() 호출")
+	// fmt.Println("ProtocolManager.Synchronise() 호출")
 	// Short circuit if no peers are available
 	if peer == nil {
 		return

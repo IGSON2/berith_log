@@ -18,6 +18,7 @@ package miner
 
 import (
 	"container/ring"
+	"fmt"
 	"sync"
 
 	"github.com/BerithFoundation/berith-chain/common"
@@ -63,6 +64,7 @@ func newUnconfirmedBlocks(chain chainRetriever, depth uint) *unconfirmedBlocks {
 
 // Insert adds a new block to the set of unconfirmed ones.
 func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
+	fmt.Println("unconfirmedBlocks.Insert() 호출")
 	// If a new block was mined locally, shift out any old enough blocks
 	set.Shift(index)
 

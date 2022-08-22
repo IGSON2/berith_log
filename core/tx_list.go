@@ -370,6 +370,7 @@ func (l *txList) Empty() bool {
 // Flatten creates a nonce-sorted slice of transactions based on the loosely
 // sorted internals representation. The result of the sorting is cached in case
 // it's requested again before any modifications are made to the contents.
+// Flatten은 느슨하게 정렬된 내부 표현을 기반으로 논스 기준 정렬된 트랜잭션 조각을 만듭니다.
 func (l *txList) Flatten() types.Transactions {
 	return l.txs.Flatten()
 }

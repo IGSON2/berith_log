@@ -936,6 +936,7 @@ func (bc *BlockChain) WriteBlockWithoutState(block *types.Block, td *big.Int) (e
 
 // WriteBlockWithState writes the block and all associated state to the database.
 func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.Receipt, state *state.StateDB) (status WriteStatus, err error) {
+	fmt.Println("BlockChain.WriteBlockWithState() 호출")
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
@@ -1099,6 +1100,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 // 사이드체인이 불러와지면 과거 state를 가져오지만, 실제 사이드체인이 완료되기 전에 새로운 캐논해드가 추가되면
 // 과거 state는 다시 제거될 수 있다.
 func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []interface{}, []*types.Log, error) {
+	fmt.Println("BlockCHain.insertChain() 호출")
 	// If the chain is terminating, don't even bother starting u
 	if atomic.LoadInt32(&bc.procInterrupt) == 1 {
 		return 0, nil, nil, nil
@@ -1284,6 +1286,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, []
 // The method writes all (header-and-body-valid) blocks to disk, then tries to
 // switch over to the new chain if the TD exceeded the current chain.
 func (bc *BlockChain) insertSidechain(it *insertIterator) (int, []interface{}, []*types.Log, error) {
+	fmt.Println("BlockChain.insertSidechain() 호출")
 	var (
 		externTd *big.Int
 		current  = bc.CurrentBlock().NumberU64()
@@ -1510,12 +1513,12 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 // posts them into the event feed.
 // TODO: Should not expose PostChainEvents. The chain events should be posted in WriteBlock.
 func (bc *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
-	fmt.Println("core.go 1501 / BlockChain.PostChainEvent() 호출")
+	fmt.Println("BlockChain.PostChainEvent() 호출")
 	// post event logs for further processing
 	if logs != nil {
 		bc.logsFeed.Send(logs)
 	}
-	fmt.Print(" BlockChain.PostChainEvent() / events : ", events)
+	fmt.Printf(" BlockChain.PostChainEvent() / events : %v\n", events)
 	for _, event := range events {
 		switch ev := event.(type) {
 		case ChainEvent:

@@ -143,7 +143,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 				peer := manager.newPeer(int(version), p, rw)
 				select {
 				case manager.newPeerCh <- peer:
-					fmt.Println("ProtocolManager.SubProtocol.Run() 호출, peer : ", p.Info().Enode)
+					// fmt.Println("ProtocolManager.SubProtocol.Run() 호출, peer : ", p.Info().Enode)
 					manager.wg.Add(1)
 					defer manager.wg.Done()
 					return manager.handle(peer)
@@ -257,7 +257,7 @@ func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *p
 // handle is the callback invoked to manage the life cycle of an berith peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p *peer) error {
-	fmt.Println("ProtocolManager.handler() 호출")
+	// fmt.Println("ProtocolManager.handler() 호출")
 	// Ignore maxPeers if this is a trusted peer
 	if pm.peers.Len() >= pm.maxPeers && !p.Peer.Info().Network.Trusted {
 		return p2p.DiscTooManyPeers

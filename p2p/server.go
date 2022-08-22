@@ -637,7 +637,7 @@ func (srv *Server) run(dialstate dialer) {
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
 			t := ts[i]
 			srv.log.Trace("New dial task", "task", t)
-			go func() { t.Do(srv); taskdone <- t; fmt.Printf("taskdone 개방, Task : %v \n", t) }()
+			go func() { t.Do(srv); taskdone <- t }()
 			runningTasks = append(runningTasks, t)
 		}
 		return ts[i:]
@@ -658,18 +658,18 @@ running:
 
 		select {
 		case <-srv.quit:
-			fmt.Println("Server.quit 개방")
+			// fmt.Println("Server.quit 개방")
 			// The server was stopped. Run the cleanup logic.
 			break running
 		case n := <-srv.addstatic:
-			fmt.Println("Server.addstatic 개방")
+			// fmt.Println("Server.addstatic 개방")
 			// This channel is used by AddPeer to add to the
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
 			srv.log.Trace("Adding static node", "node", n)
 			dialstate.addStatic(n)
 		case n := <-srv.removestatic:
-			fmt.Println("Server.removestatic 개방")
+			// fmt.Println("Server.removestatic 개방")
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
 			// stop keeping the node connected.
@@ -679,7 +679,7 @@ running:
 				p.Disconnect(DiscRequested)
 			}
 		case n := <-srv.addtrusted:
-			fmt.Println("Server.addtrusted 개방")
+			// fmt.Println("Server.addtrusted 개방")
 			// This channel is used by AddTrustedPeer to add an enode
 			// to the trusted node set.
 			srv.log.Trace("Adding trusted node", "node", n)
@@ -689,7 +689,7 @@ running:
 				p.rw.set(trustedConn, true)
 			}
 		case n := <-srv.removetrusted:
-			fmt.Println("Server.removetrusted 개방")
+			// fmt.Println("Server.removetrusted 개방")
 			// This channel is used by RemoveTrustedPeer to remove an enode
 			// from the trusted node set.
 			srv.log.Trace("Removing trusted node", "node", n)
@@ -705,7 +705,7 @@ running:
 			op(peers)
 			srv.peerOpDone <- struct{}{}
 		case t := <-taskdone:
-			fmt.Println("taskdone 개방 후 하위로직 실행")
+			// fmt.Println("taskdone 개방 후 하위로직 실행")
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
@@ -713,7 +713,7 @@ running:
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
-			fmt.Println("Server.posthandshake 개방")
+			// fmt.Println("Server.posthandshake 개방")
 			// A connection has passed the encryption handshake so
 			// the remote identity is known (but hasn't been verified yet).
 			if trusted[c.node.ID()] {
@@ -727,7 +727,7 @@ running:
 				break running
 			}
 		case c := <-srv.addpeer:
-			fmt.Println("Server.addpeer 개방")
+			// fmt.Println("Server.addpeer 개방")
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
 			err := srv.protoHandshakeChecks(peers, inboundCount, c)
@@ -756,7 +756,7 @@ running:
 				break running
 			}
 		case pd := <-srv.delpeer:
-			fmt.Println("Server.delpeer개방")
+			// fmt.Println("Server.delpeer개방")
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
 			pd.log.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
@@ -902,7 +902,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *enode.Node) 
 }
 
 func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) error {
-	fmt.Println("Server.setupConn() 호출")
+	// fmt.Println("Server.setupConn() 호출")
 
 	// Prevent leftover pending conns from entering the handshake.
 	srv.lock.Lock()
@@ -943,7 +943,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
 		return err
 	} else {
-		fmt.Println("server.checkpoint(posthandshake) 호출")
+		// fmt.Println("server.checkpoint(posthandshake) 호출")
 	}
 	// Run the protocol handshake
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
@@ -961,7 +961,7 @@ func (srv *Server) setupConn(c *conn, flags connFlag, dialDest *enode.Node) erro
 		clog.Trace("Rejected peer", "err", err)
 		return err
 	} else {
-		fmt.Println("server.checkpoint(addpeer) 호출")
+		// fmt.Println("server.checkpoint(addpeer) 호출")
 	}
 	// If the checks completed successfully, runPeer has now been
 	// launched by run.
@@ -991,7 +991,7 @@ func truncateName(s string) string {
 func (srv *Server) checkpoint(c *conn, stage chan<- *conn) error {
 	select {
 	case stage <- c:
-		fmt.Println("checkpoint() 내부 stage <- conn 처리")
+		// fmt.Println("checkpoint() 내부 stage <- conn 처리")
 	case <-srv.quit:
 		return errServerStopped
 	}
@@ -1007,7 +1007,7 @@ func (srv *Server) checkpoint(c *conn, stage chan<- *conn) error {
 // it waits until the Peer logic returns and removes
 // the peer.
 func (srv *Server) runPeer(p *Peer) {
-	fmt.Println("Server.runPeer() 호출")
+	// fmt.Println("Server.runPeer() 호출")
 
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)

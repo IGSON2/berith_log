@@ -543,6 +543,7 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // Pending은 origin address로 그룹화되고 nonce별로 정렬되어있는 현재 처리가능한 모든 트랜잭션을 찾아온다
 // 반환된 트랜잭션은 모두 사본이며 코드를 불러옴으로써 자유롭게 수정 가능하다.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
+	fmt.Println("TxPool.Pending() 호출")
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -875,6 +876,7 @@ func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 // marking the senders as a local ones in the mean time, ensuring they go around
 // the local pricing constraints.
 func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
+	fmt.Println("TxPool.AddLocal() 호출")
 	return pool.addTxs(txs, !pool.config.NoLocals)
 }
 
@@ -882,11 +884,13 @@ func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
 // If the senders are not among the locally tracked ones, full pricing constraints
 // will apply.
 func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
+	fmt.Println("TxPool.AddRemote() 호출")
 	return pool.addTxs(txs, false)
 }
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
+	fmt.Println("TxPool.addTx() 호출")
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -905,6 +909,7 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
+	fmt.Println("TxPool.addTxs() 호출")
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
@@ -914,6 +919,7 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
 // addTxsLocked attempts to queue a batch of transactions if they are valid,
 // whilst assuming the transaction pool lock is already held.
 func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
+	fmt.Println("TxPool.addTxLocked() 호출")
 	// Add the batch of transactions, tracking the accepted ones
 	dirty := make(map[common.Address]struct{})
 	errs := make([]error, len(txs))

@@ -86,7 +86,7 @@ func (mux *TypeMux) Post(ev interface{}) error {
 		Time: time.Now(),
 		Data: ev,
 	}
-	rtyp := reflect.TypeOf(ev)
+	rtyp := reflect.TypeOf(ev) // subscription한 채널로 타입을 구분하여 이벤트 전송
 	mux.mutex.RLock()
 	if mux.stopped {
 		mux.mutex.RUnlock()

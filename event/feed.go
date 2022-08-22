@@ -130,7 +130,7 @@ func (f *Feed) remove(sub *feedSub) {
 // It returns the number of subscribers that the value was sent to.
 func (f *Feed) Send(value interface{}) (nsent int) {
 	rvalue := reflect.ValueOf(value)
-	fmt.Println("Feed.Send() 호출, Type : ", reflect.TypeOf(value))
+	// fmt.Println("Feed.Send() 호출, Type : ", reflect.TypeOf(value))
 
 	f.once.Do(f.init)
 	<-f.sendLock
@@ -161,7 +161,7 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 		// buffer space.
 		for i := firstSubSendCase; i < len(cases); i++ {
 			if cases[i].Chan.TrySend(rvalue) {
-				fmt.Println("Trysend Successfully ! type : ", rvalue.Type())
+				fmt.Println("Trysend Successfully ! Type : ", rvalue.Type())
 				nsent++
 				cases = cases.deactivate(i)
 				i--
