@@ -150,6 +150,9 @@ type SignerFn func(accounts.Account, []byte) ([]byte, error)
 // Note, the method requires the extra data to be at least 65 bytes, otherwise it
 // panics. This is done to avoid accidentally using both forms (signature present
 // or not), which could be abused to produce different hashes for the same header.
+//
+// sigHash는 권한 증명 서명을 위한 입력으로 사용되는 해시를 반환한다.
+// 추가 데이터 끝에 포함된 65바이트 시그니처를 제외한 전체 헤더의 해시입니다.
 func sigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 
@@ -735,6 +738,7 @@ func (c *BSRR) getStakeTargetBlock(chain consensus.ChainReader, parent *types.He
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
+// SealHash는 블록이 sealing되기 전에 블록의 해시를 반환합니다.
 func (c *BSRR) SealHash(header *types.Header) common.Hash {
 	return sigHash(header)
 }

@@ -18,7 +18,6 @@ package event
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -228,7 +227,7 @@ type scopeSub struct {
 // returned subscription is a wrapper. Unsubscribing the wrapper removes it from the
 // scope.
 func (sc *SubscriptionScope) Track(s Subscription) Subscription {
-	fmt.Println("SubscriptionScope.Track() 호출")
+	// fmt.Println("SubscriptionScope.Track() 호출")
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	if sc.closed {

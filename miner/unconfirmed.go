@@ -47,11 +47,25 @@ type unconfirmedBlock struct {
 // have not yet reached enough maturity to guarantee chain inclusion. It is
 // used by the miner to provide logs to the user when a previously mined block
 // has a high enough guarantee to not be reorged out of the canonical chain.
+//
+// unconfirmedBlocks는 체인 포함을 보장하기 위해 아직 충분한 성숙도에 도달하지 않은
+// 로컬 마이닝 블록을 유지하기 위한 데이터 구조를 구현한다.
+// 이전에 채굴된 블록이 정규 체인에서 재기록되지 않을 만큼 충분히 높은 개런티를 가질 때
+// 마이너가 로그를 제공하기 위해 사용한다.
 type unconfirmedBlocks struct {
-	chain  chainRetriever // Blockchain to verify canonical status through
-	depth  uint           // Depth after which to discard previous blocks
-	blocks *ring.Ring     // Block infos to allow canonical chain cross checks
-	lock   sync.RWMutex   // Protects the fields from concurrent access
+	// Blockchain to verify canonical status through
+	// 표준 상태를 확인할 수 있는 블록체인
+	chain chainRetriever
+
+	// Depth after which to discard previous blocks
+	// 이전 블록을 폐기할 깊이
+	depth uint
+
+	// Block infos to allow canonical chain cross checks
+	// 표준 체인 크로스체킹을 허용하기 위한 블록 정보
+	blocks *ring.Ring
+
+	lock sync.RWMutex // Protects the fields from concurrent access
 }
 
 // newUnconfirmedBlocks returns new data structure to track currently unconfirmed blocks.
@@ -90,17 +104,22 @@ func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 // Shift drops all unconfirmed blocks from the set which exceed the unconfirmed sets depth
 // allowance, checking them against the canonical chain for inclusion or staleness
 // report.
+//
+// Shift는 확인되지 않은 설정 깊이 허용치를 초과하는 모든 미확인 블록을 세트에서 삭제한 다음
+// 포함 또는 지연 보고서를 작성하기 위해 표준 체인과 대조한다.
 func (set *unconfirmedBlocks) Shift(height uint64) {
 	set.lock.Lock()
 	defer set.lock.Unlock()
 
 	for set.blocks != nil {
 		// Retrieve the next unconfirmed block and abort if too fresh
+		// 다음 미확인 블록을 검색하고 생성된 지 얼마 안됐다면 처리를 중단한다.
 		next := set.blocks.Value.(*unconfirmedBlock)
 		if next.index+uint64(set.depth) > height {
 			break
 		}
 		// Block seems to exceed depth allowance, check for canonical status
+		// 블록이 depth 허용치를 초과해 보인다면 표준 status를 확인한다.
 		header := set.chain.GetHeaderByNumber(next.index)
 		switch {
 		case header == nil:
@@ -109,6 +128,7 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 			log.Info("🔗 block reached canonical chain", "number", next.index, "hash", next.hash)
 		default:
 			// Block is not canonical, check whether we have an uncle or a lost block
+			// 블록이 정본이 아니라면, 엉클블록으로 가져올지, 블록을 포기할지 확인한다.
 			included := false
 			for number := next.index; !included && number < next.index+uint64(set.depth) && number <= height; number++ {
 				if block := set.chain.GetBlockByNumber(number); block != nil {

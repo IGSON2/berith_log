@@ -519,6 +519,7 @@ func (s *StateDB) SetState(addr common.Address, key, value common.Hash) {
 // The account's state object is still available until the state is committed,
 // getStateObject will return a non-nil account after Suicide.
 func (s *StateDB) Suicide(addr common.Address) bool {
+	fmt.Println("StateDB.Suicide() 호출")
 	stateObject := s.getStateObject(addr)
 	if stateObject == nil {
 		return false
@@ -727,7 +728,7 @@ func (s *StateDB) GetRefund() uint64 {
 // Finalise는 스스로 파괴되는 객체를 지움으로써 상태를 종료한다. 그리고 journal과 refuns를 정리한다.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 	fmt.Println("StateDB.Finalise() 호출")
-	for addr := range s.journal.dirties {
+	for addr := range s.journal.dirties { // dirties가 뭐길래..?
 		stateObject, exist := s.stateObjects[addr]
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
@@ -738,11 +739,12 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 			// Thus, we can safely ignore it here
 			continue
 		}
+		fmt.Println("StateDB.Finalise() / suicided : ", stateObject.suicided)
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
-			fmt.Println("DeleteObject.")
+			fmt.Println("StateDB.Finalise() : DeleteObject.")
 			s.deleteStateObject(stateObject)
 		} else {
-			fmt.Println("UpdateObject.")
+			fmt.Println("StateDB.Finalise() : UpdateObject.")
 			stateObject.updateRoot(s.db)
 			s.updateStateObject(stateObject)
 		}
@@ -755,6 +757,9 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // IntermediateRoot computes the current root hash of the state trie.
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
+//
+// InterMediateRoot는 상태 트리의 현재 루트 해시를 계산한다.
+// 트랜잭션 receipts에 들어가는 루트 해시를 가져오기 위해 트랜잭션 간에 호출된다.
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.Finalise(deleteEmptyObjects)
 	return s.trie.Hash()
@@ -762,7 +767,10 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 
 // Prepare sets the current transaction hash and index and block hash which is
 // used when the EVM emits new state logs.
+// Prepare는 EVM이 새 상태 로그를 내보낼 때 사용되는 현재 트랜잭션 해시 및
+// 인덱스 및 블록 해시를 설정합니다.
 func (s *StateDB) Prepare(thash, bhash common.Hash, ti int) {
+	fmt.Println("StateDB.Prepare() 호출")
 	s.thash = thash
 	s.bhash = bhash
 	s.txIndex = ti

@@ -271,7 +271,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 // outside blockchain events as well as for various reporting and transaction
 // eviction events.
 func (pool *TxPool) loop() {
-	fmt.Println("TxPool() 호출")
+	fmt.Println("TxPool.loop() 호출")
 	defer pool.wg.Done()
 
 	// Start the stats reporting and transaction eviction tickers
@@ -362,7 +362,11 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 
 // reset retrieves the current state of the blockchain and ensures the content
 // of the transaction pool is valid with regard to the chain state.
+//
+// reset은 블록체인의 현재 상태를 검색하고 트랜잭션풀의 컨텐츠가 체인 state와 관련하여
+// 유효한지 확인한다.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
+	fmt.Println("TxPool.reset() 호출")
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
 
@@ -464,6 +468,8 @@ func (pool *TxPool) Stop() {
 // starts sending event to the given channel.
 func (pool *TxPool) SubscribeNewTxsEvent(ch chan<- NewTxsEvent) event.Subscription {
 	fmt.Println("TxPool.SubscribenewTxsEvent() 호출")
+	// txFeed가 여기서 NewTxsEvent타입의 채널을 Subscribe하고 있기 때문에
+	// 다른 객체의 NewTxsEvent 채널이
 	return pool.scope.Track(pool.txFeed.Subscribe(ch))
 }
 
@@ -705,7 +711,7 @@ func CheckStakeBalanceAmount(totalStakingAmount, maximum *big.Int) bool {
 // 트랜잭션이 이미 보류 중이거나 대기 중인 트랜잭션을 대체할 경우 이전 트랜잭션을 덮어쓰고 이를
 // 반환하여 외부 코드가 불필요하게 프로모트를 호출하지 않습니다.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
-	fmt.Println("core.go 687 / TxPool.add() 호출")
+	fmt.Println("TxPool.add() 호출")
 	// If the transaction is already known, discard it
 	// 트랜잭션이 이미 알고있는것 이라면 무시한다.
 	hash := tx.Hash()
@@ -741,6 +747,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
 		inserted, old := list.Add(tx, pool.config.PriceBump)
+		fmt.Println("TxPool.add() / pending[from] is not nil and got same nonce of tx, old : ", old, "list inserted : ", inserted)
 		if !inserted {
 			pendingDiscardCounter.Inc(1)
 			return false, ErrReplaceUnderpriced
@@ -759,7 +766,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 		// We've directly injected a replacement transaction, notify subsystems
 		go pool.txFeed.Send(NewTxsEvent{types.Transactions{tx}})
-
+		fmt.Println("TxPool.add() / Send NewTxsEvent : ", tx)
 		return old != nil, nil
 	}
 	// New transaction isn't replacing a pending one, push into queue
@@ -823,7 +830,11 @@ func (pool *TxPool) journalTx(from common.Address, tx *types.Transaction) {
 // and returns whether it was inserted or an older was better.
 //
 // Note, this method assumes the pool lock is held!
+//
+// promoteTx는 트랜잭션을 미처리 트랜잭션 리스트에 추가하고 기존 트랜잭션과
+// 비교하여 추가 여부를 반환한다.
 func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.Transaction) bool {
+	fmt.Println("TxPool.promoteTx() 호출")
 	// Try to insert the transaction into the pending queue
 	if pool.pending[addr] == nil {
 		pool.pending[addr] = newTxList(true)
@@ -862,7 +873,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // the sender as a local one in the mean time, ensuring it goes around the local
 // pricing constraints.
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
-	return pool.addTx(tx, !pool.config.NoLocals)
+	return pool.addTx(tx, !pool.config.NoLocals) // Local
 }
 
 // AddRemote enqueues a single transaction into the pool if it is valid. If the
@@ -918,6 +929,8 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
 
 // addTxsLocked attempts to queue a batch of transactions if they are valid,
 // whilst assuming the transaction pool lock is already held.
+// addTxsLocked는 트랜잭션 풀 잠금이 이미 보류되었다고 가정하면서
+// 트랜잭션 배치(유효한 경우)를 대기열에 넣으려고 시도합니다.
 func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 	fmt.Println("TxPool.addTxLocked() 호출")
 	// Add the batch of transactions, tracking the accepted ones
@@ -1019,7 +1032,7 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 // 보류 중인 트랜잭션 집합으로 이동시킨다. 이 프로세스 중에 무효화된
 // 모든 트랜잭션(Low Nonce, Low Balance)은 삭제된다.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
-	fmt.Println("core.go 990 / TxPool.promoteExecutables() 호출")
+	fmt.Println("core.go 990 / TxPool.promoteExecutables() 호출, Accounts : ", accounts)
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
 
@@ -1256,6 +1269,9 @@ func (a addressesByHeartbeat) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 // accountSet is simply a set of addresses to check for existence, and a signer
 // capable of deriving addresses from transactions.
+//
+// accountSet은 존재여부를 확인 할 수 있는 간단한 주소 셋이며, 트랜잭션에서 주소를
+// 추출할 수 있는 서명자이다.
 type accountSet struct {
 	accounts map[common.Address]struct{}
 	signer   types.Signer

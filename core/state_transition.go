@@ -19,6 +19,7 @@ package core
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 
@@ -137,6 +138,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 //
 // ApplyMessage는 환경 내의 이전 상태에 대해 주어진 메시지를 적용하여 새 상태를 계산합니다.
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
+	fmt.Println("ApplyMessage() 호출")
 	return NewStateTransition(evm, msg, gp).TransitionDb(msg.Base(), msg.Target())
 }
 

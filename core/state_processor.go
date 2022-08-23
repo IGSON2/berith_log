@@ -156,6 +156,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	처리할 거래의 수취인 지분 잔액을 확인하고 한도를 초과하는 경우 변경한다.
 */
 func adjustStateForBIP4(config *params.ChainConfig, statedb *state.StateDB, header *types.Header, tx *types.Transaction) {
+	fmt.Println("adjustStateForBIP4 () 호출")
 	stakedBalance := big.NewInt(0)
 	var recipient *common.Address
 	if tx.To() != nil {
@@ -164,6 +165,7 @@ func adjustStateForBIP4(config *params.ChainConfig, statedb *state.StateDB, head
 	}
 
 	if config.IsBIP4(header.Number) && stakedBalance.Cmp(config.Bsrr.LimitStakeBalance) == 1 {
+		fmt.Println("adjustStateForBIP4 / recipient stakes more than limit.")
 		// Adjust staking balance of accounts staking above the limit
 		difference := new(big.Int).Sub(stakedBalance, config.Bsrr.LimitStakeBalance)
 		statedb.AddStakeBalance(*recipient, new(big.Int).Neg(difference), header.Number)

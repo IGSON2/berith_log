@@ -380,6 +380,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			}
 
 		case adjust := <-w.resubmitAdjustCh:
+			fmt.Println("newWorkLoop() / resubmitAdjustCh 수신, adjust : ", adjust)
 			// Adjust resubmit interval by feedback.
 			if adjust.inc {
 				before := recommit
@@ -455,7 +456,8 @@ func (w *worker) mainLoop() {
 			}
 
 		case ev := <-w.txsCh:
-			fmt.Println("worker.txsCh 개방 후 하위 로직 실행")
+			fmt.Println("worker.txsCh 개방 후 하위 로직 실행 len(txs) : ", len(ev.Txs))
+			// 채굴중이 아니라면 미처리 상태로 트랜잭션을 적용시킨다.
 			// Apply transactions to the pending state if we're not mining.
 			//
 			// Note all transactions received may not be continuous with transactions
@@ -511,7 +513,7 @@ func (w *worker) taskLoop() {
 		select {
 		case task := <-w.taskCh:
 			fmt.Println("worker.taskLoop() / worker.taskCh 개방 후 하위 로직 실행, Task : ")
-			fmt.Printf("task.block : %v\ntask.receipts : %v\ntask.state : %v\n", task.block, task.receipts, task.state)
+			fmt.Printf("task.block : %v\ntask.receipts : %v\n", task.block.Number(), task.receipts)
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
 			}
@@ -549,7 +551,7 @@ func (w *worker) resultLoop() {
 		select {
 		case block := <-w.resultCh:
 			fmt.Println("worker.resultLoop() / worker.resultCh 개방 후 하위 로직 실행")
-			fmt.Printf("BlockHeader : %v\nUncles : %v\nTransactions : %v\n", block.Header().Hash(), block.Uncles(), block.Transactions())
+			fmt.Printf("BlockHeader : %v\nUncles : %v\nTransactions : %v\n", block.Header().Number, block.Uncles(), block.Transactions())
 			// Short circuit when receiving empty result.
 			if block == nil {
 				continue
@@ -605,10 +607,11 @@ func (w *worker) resultLoop() {
 			case core.SideStatTy:
 				events = append(events, core.ChainSideEvent{Block: block})
 			}
-			w.chain.PostChainEvents(events, logs) //워커의 Chain * Event가 아니고 w.chain의 이벤트.
+			w.chain.PostChainEvents(events, logs)
 			fmt.Println("ResultlLoop() 내부 worker.chain.PostChainEvent() 호출")
 
 			// Insert the block into the set of pending ones to resultLoop for confirmations
+			// 확인을 위해 ResultLoop에 보류 중인 블록 집합에 블록을 삽입한다.
 			w.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
 		case <-w.exitCh:
@@ -709,6 +712,7 @@ func (w *worker) updateSnapshot() {
 }
 
 func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Address) ([]*types.Log, error) {
+	fmt.Println("commitTransaction() 호출")
 	snap := w.current.state.Snapshot()
 
 	receipt, _, err := core.ApplyTransaction(w.config, w.chain, &coinbase, w.current.gasPool, w.current.state, w.current.header, tx, &w.current.header.GasUsed, *w.chain.GetVMConfig())
@@ -743,11 +747,13 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		// (3) worker recreate the mining block with any newly arrived transactions, the interrupt signal is 2.
 		// For the first two cases, the semi-finished work will be discarded.
 		// For the third case, the semi-finished work will be submitted to the consensus engine.
+		fmt.Println("commitTransactions / interrupt - ", &interrupt)
 		if interrupt != nil && atomic.LoadInt32(interrupt) != commitInterruptNone {
 			// Notify resubmit loop to increase resubmitting interval due to too frequent commits.
 			if atomic.LoadInt32(interrupt) == commitInterruptResubmit {
 				ratio := float64(w.current.header.GasLimit-w.current.gasPool.Gas()) / float64(w.current.header.GasLimit)
-				if ratio < 0.1 {
+				// 가스풀이 가스 리밋에비해 얼마나 차있는가?
+				if ratio < 0.1 { // 10% 미만인경우
 					ratio = 0.1
 				}
 				w.resubmitAdjustCh <- &intervalAdjust{
@@ -942,8 +948,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		// 블럭 확정 처리를 기다리지 않고 미리 포장을 하기 위해 임시로 복제된 state를 기반으로 빈 블럭을 생성한다.
 		fmt.Println("빈 블럭 commit")
 		w.commit(uncles, nil, false, tstart)
-		time.Sleep(1 * time.Minute)
-		fmt.Println("Restart !", strings.Repeat("=", 50))
+
 	}
 
 	// Fill the block with all available pending transactions.
@@ -970,16 +975,19 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
-			return
+			fmt.Println("commitNewWork / Return")
+			return // Tx가 비어있다면 여기서 리턴
 		}
 	}
 	if len(remoteTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
-			return
+			fmt.Println("commitNewWork / Return")
+			return // Tx가 비어있다면 여기서 리턴
 		}
 	}
-
+	time.Sleep(1 * time.Minute)
+	fmt.Println("Restart !", strings.Repeat("=", 50))
 	w.commit(uncles, w.fullTaskHook, true, tstart)
 }
 
@@ -1005,7 +1013,7 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 		}
 		select {
 		case w.taskCh <- &task{receipts: receipts, state: s, block: block, createdAt: time.Now()}:
-			fmt.Println("worker.taskCh 데이터 삽입으로 개방")
+			fmt.Println("worker.taskCh 데이터 발신으로 개방")
 			w.unconfirmed.Shift(block.NumberU64() - 1)
 
 			feesWei := new(big.Int)

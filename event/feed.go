@@ -72,6 +72,8 @@ func (f *Feed) init() {
 // The channel should have ample buffer space to avoid blocking other subscribers.
 // Slow subscribers are not dropped.
 func (f *Feed) Subscribe(channel interface{}) Subscription {
+	// (SomeThing).feed가 특정 타입의 채널을 여기서 구독하면
+	// 아래의 Send를 통해 다른 객체가 특정 타입의 채널로 전달한 데이터를 받아볼 수 있음.
 	fmt.Println("Feed.Subscribe() 호출 channel : ", reflect.TypeOf(channel))
 	f.once.Do(f.init)
 

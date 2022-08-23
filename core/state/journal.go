@@ -17,7 +17,9 @@
 package state
 
 import (
+	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/BerithFoundation/berith-chain/common"
 )
@@ -49,6 +51,7 @@ func newJournal() *journal {
 
 // append inserts a new modification entry to the end of the change journal.
 func (j *journal) append(entry journalEntry) {
+	fmt.Println("journal.append() 호출, Journal type : ", reflect.TypeOf(entry))
 	j.entries = append(j.entries, entry)
 	if addr := entry.dirtied(); addr != nil {
 		j.dirties[*addr]++
@@ -58,6 +61,7 @@ func (j *journal) append(entry journalEntry) {
 // revert undoes a batch of journalled modifications along with any reverted
 // dirty handling too.
 func (j *journal) revert(statedb *StateDB, snapshot int) {
+	fmt.Println("journal.revert() 호출")
 	for i := len(j.entries) - 1; i >= snapshot; i-- {
 		// Undo the changes made by the operation
 		j.entries[i].revert(statedb)
@@ -76,6 +80,7 @@ func (j *journal) revert(statedb *StateDB, snapshot int) {
 // otherwise suggest it as clean. This method is an ugly hack to handle the RIPEMD
 // precompile consensus exception.
 func (j *journal) dirty(addr common.Address) {
+	fmt.Println("journal.dirty() 호출")
 	j.dirties[addr]++
 }
 

@@ -156,7 +156,8 @@ func (c *ChainIndexer) AddCheckpoint(section uint64, shead common.Hash) {
 // Start creates a goroutine to feed chain head events into the indexer for
 // cascading background processing. Children do not need to be started, they
 // are notified about new events by their parents.
-// ChainIndexer.Start()는 백그라운드 처리에 종속되어있는 인덱서에게 체인헤드 이벤트를 공급하기 위한 고루틴을 생성한다.
+// ChainIndexer.Start()는 백그라운드 처리에 종속되어있는 (Bloom)인덱서에게
+// 체인헤드 이벤트를 공급하기 위한 고루틴을 생성한다.
 func (c *ChainIndexer) Start(chain ChainIndexerChain) {
 	events := make(chan ChainHeadEvent, 10)
 	sub := chain.SubscribeChainHeadEvent(events)
@@ -238,7 +239,7 @@ func (c *ChainIndexer) eventLoop(currentHeader *types.Header, events chan ChainH
 				return
 			}
 			header := ev.Block.Header()
-			fmt.Println("chain_indexer.go / 215 - ChainIndexer.evetLoop() ChainHeadEvents 수신 : ", header.Number.Int64())
+			fmt.Println("ChainIndexer.evetLoop() ChainHeadEvents 수신 : ", header.Number.Int64())
 			if header.ParentHash != prevHash {
 				// Reorg to the common ancestor if needed (might not exist in light sync mode, skip reorg then)
 				// TODO(karalabe, zsfelfoldi): This seems a bit brittle, can we detect this case explicitly?
