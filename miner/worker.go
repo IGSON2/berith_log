@@ -311,7 +311,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		fmt.Println("worker.newWorkLoop 내부 commit() 함수 호출")
 		if interrupt != nil {
 			atomic.StoreInt32(interrupt, s)
-		}
+		} // ??
 		interrupt = new(int32)
 		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp}
 		fmt.Println("worker.newWorkch 개방")

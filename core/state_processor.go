@@ -107,6 +107,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 
 	adjustStateForBIP4(config, statedb, header, tx)
 
+	// unstaking 하려면 3일 기다려야 함
 	if config.IsBIP4(header.Number) && (msg.Base() == types.Stake && msg.Target() == types.Main) && !checkBreakTransaction(msg, header.Number, config.Bsrr.Period) {
 		return nil, 0, errors.New("Unstaking transactions are processed only after the lock up period.")
 	}
@@ -137,7 +138,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = gas
 	// if the transaction created a contract, store the creation address in the receipt.
-	// 컨트랙트 트랜잭션 처리
+	// 트랜잭션이 컨트랙트를 생성했다면, 생성된 주소를 영수증에 저장한다.
 	if msg.To() == nil {
 		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
 	}
@@ -186,7 +187,7 @@ func adjustStateForBIP4(config *params.ChainConfig, statedb *state.StateDB, head
 	The Break Transaction has a three-day grace period.
 */
 func checkBreakTransaction(msg types.Message, blockNumber *big.Int, period uint64) bool {
-	lockUpPeriod := big.NewInt(int64((60 * 60 * 24 * 3) / period)) // 3 days
+	lockUpPeriod := big.NewInt(int64((60 * 60 * 24 * 3) / period)) // Created blocks in 3 days
 	elapsedBlockNumber := new(big.Int).Sub(blockNumber, new(big.Int).SetBytes(msg.Data()))
 	return elapsedBlockNumber.Cmp(lockUpPeriod) == 1
 }
