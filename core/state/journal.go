@@ -38,7 +38,8 @@ type journalEntry interface {
 // commit. These are tracked to be able to be reverted in case of an execution
 // exception or revertal request.
 type journal struct {
-	entries []journalEntry         // Current changes tracked by the journal
+	entries []journalEntry // Current changes tracked by the journal
+	// dirty account는 마지막 state commit 이후 상태가 수정된 account를 말함
 	dirties map[common.Address]int // Dirty accounts and the number of changes
 }
 

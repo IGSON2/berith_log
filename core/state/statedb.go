@@ -471,6 +471,7 @@ func (s *StateDB) GetPenaltyUpdated(addr common.Address) *big.Int {
 
 // AddBalance adds amount to the account associated with addr.
 func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
+	fmt.Printf("%s added Balance : %v\n", addr, amount)
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.AddBalance(amount)
@@ -479,6 +480,7 @@ func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 
 // SubBalance subtracts amount from the account associated with addr.
 func (s *StateDB) SubBalance(addr common.Address, amount *big.Int) {
+	fmt.Printf("%s decreased Balance : %v\n", addr, amount)
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SubBalance(amount)
@@ -783,6 +785,7 @@ func (s *StateDB) clearJournalAndRefund() {
 }
 
 // Commit writes the state to the underlying in-memory trie database.
+// Commit는 state를 메모리 내부에있는 트리 데이터베이스에 기록한다.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) {
 	fmt.Println("StateDB.Commit() 호출")
 	defer s.clearJournalAndRefund()

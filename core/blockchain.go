@@ -1519,7 +1519,6 @@ func (bc *BlockChain) PostChainEvents(events []interface{}, logs []*types.Log) {
 	if logs != nil {
 		bc.logsFeed.Send(logs)
 	}
-	fmt.Printf(" BlockChain.PostChainEvent() / events : %v\n", events)
 	for _, event := range events {
 		switch ev := event.(type) {
 		case ChainEvent:

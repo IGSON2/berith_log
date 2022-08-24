@@ -19,6 +19,7 @@ package rawdb
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/BerithFoundation/berith-chain/common"
@@ -241,7 +242,8 @@ func DeleteBody(db DatabaseDeleter, hash common.Hash, number uint64) {
 
 // ReadTd retrieves a block's total difficulty corresponding to the hash.
 func ReadTd(db DatabaseReader, hash common.Hash, number uint64) *big.Int {
-	data, _ := db.Get(headerTDKey(number, hash))
+	htdkey := headerTDKey(number, hash)
+	data, _ := db.Get(htdkey)
 	if len(data) == 0 {
 		return nil
 	}
@@ -344,6 +346,7 @@ func ReadBlock(db DatabaseReader, hash common.Hash, number uint64) *types.Block 
 
 // WriteBlock serializes a block into the database, header and body separately.
 func WriteBlock(db DatabaseWriter, block *types.Block) {
+	fmt.Println("WriteBlock() 호출")
 	WriteBody(db, block.Hash(), block.NumberU64(), block.Body())
 	WriteHeader(db, block.Header())
 }

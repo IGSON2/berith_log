@@ -349,7 +349,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		}
 		w.pendingMu.Unlock()
 	}
-
+	nextWorkTimer := time.NewTimer(0)
 	for {
 		select {
 		case <-w.startCh:
@@ -360,6 +360,9 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 		case head := <-w.chainHeadCh:
 			fmt.Println("NewWorkLoop() / worker.chainHeadCh 개방 후 하위 로직 실행")
+			nextWorkTimer.Reset(1)
+			<-nextWorkTimer.C
+			fmt.Println(strings.Repeat("=", 50), " next work start!")
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
@@ -380,7 +383,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			}
 
 		case adjust := <-w.resubmitAdjustCh:
-			fmt.Println("newWorkLoop() / resubmitAdjustCh 수신, adjust : ", adjust)
+			fmt.Println("newWorkLoop() / resubmitAdjustCh 수신, adjust : ", adjust.inc, adjust.ratio)
 			// Adjust resubmit interval by feedback.
 			if adjust.inc {
 				before := recommit
@@ -601,7 +604,6 @@ func (w *worker) resultLoop() {
 			var events []interface{}
 			switch stat {
 			case core.CanonStatTy:
-				// 왜 txpool.chainEventCh만 Read 할 수 있는걸까
 				events = append(events, core.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
 				events = append(events, core.ChainHeadEvent{Block: block})
 			case core.SideStatTy:
@@ -716,7 +718,7 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	snap := w.current.state.Snapshot()
 
 	receipt, _, err := core.ApplyTransaction(w.config, w.chain, &coinbase, w.current.gasPool, w.current.state, w.current.header, tx, &w.current.header.GasUsed, *w.chain.GetVMConfig())
-	if err != nil {
+	if err != nil { // 트랜잭션 실행이 실패할 경우 스냅샷을 되돌린다.
 		w.current.state.RevertToSnapshot(snap)
 		return nil, err
 	}
@@ -731,6 +733,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 	fmt.Println("worker.commintTransacitons() 호출")
 	// Short circuit if current is nil
 	if w.current == nil {
+		fmt.Println("worker.current is nil")
 		return true
 	}
 
@@ -747,7 +750,12 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		// (3) worker recreate the mining block with any newly arrived transactions, the interrupt signal is 2.
 		// For the first two cases, the semi-finished work will be discarded.
 		// For the third case, the semi-finished work will be submitted to the consensus engine.
-		fmt.Println("commitTransactions / interrupt - ", &interrupt)
+		fmt.Print("commitTransactions / interrupt - ")
+		if interrupt != nil {
+			fmt.Println(atomic.LoadInt32(interrupt))
+		} else {
+			fmt.Println("nil")
+		}
 		if interrupt != nil && atomic.LoadInt32(interrupt) != commitInterruptNone {
 			// Notify resubmit loop to increase resubmitting interval due to too frequent commits.
 			if atomic.LoadInt32(interrupt) == commitInterruptResubmit {
@@ -760,6 +768,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 					ratio: ratio,
 					inc:   true,
 				}
+				fmt.Println("commitTransactions / resubmintAdjustCh 데이터 발신")
 			}
 			return atomic.LoadInt32(interrupt) == commitInterruptNewHead
 		}
@@ -791,6 +800,10 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		w.current.state.Prepare(tx.Hash(), common.Hash{}, w.current.tcount)
 
 		logs, err := w.commitTransaction(tx, coinbase)
+		fmt.Println("commitTransactions / receipt logs...")
+		for _, log := range logs {
+			fmt.Println("\t", log)
+		}
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
@@ -967,7 +980,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	localTxs, remoteTxs := make(map[common.Address]types.Transactions), pending
 	for _, account := range w.e.TxPool().Locals() {
 		if txs := remoteTxs[account]; len(txs) > 0 {
-			delete(remoteTxs, account)
+			delete(remoteTxs, account) // 로컬에 이미 있으니 리모트에서 제거
 			localTxs[account] = txs
 		}
 	}
@@ -976,18 +989,17 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
 			fmt.Println("commitNewWork / Return")
-			return // Tx가 비어있다면 여기서 리턴
+			return // Tx가 커밋 됐다면 여기서 리턴
 		}
 	}
 	if len(remoteTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
 			fmt.Println("commitNewWork / Return")
-			return // Tx가 비어있다면 여기서 리턴
+			return // Tx가 커밋 됐다면 여기서 리턴
 		}
 	}
-	time.Sleep(1 * time.Minute)
-	fmt.Println("Restart !", strings.Repeat("=", 50))
+
 	w.commit(uncles, w.fullTaskHook, true, tstart)
 }
 
@@ -1013,7 +1025,7 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 		}
 		select {
 		case w.taskCh <- &task{receipts: receipts, state: s, block: block, createdAt: time.Now()}:
-			fmt.Println("worker.taskCh 데이터 발신으로 개방")
+			fmt.Println("worker.commit() / taskCh 데이터 발신으로 개방")
 			w.unconfirmed.Shift(block.NumberU64() - 1)
 
 			feesWei := new(big.Int)

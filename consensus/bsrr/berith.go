@@ -152,7 +152,7 @@ type SignerFn func(accounts.Account, []byte) ([]byte, error)
 // or not), which could be abused to produce different hashes for the same header.
 //
 // sigHash는 권한 증명 서명을 위한 입력으로 사용되는 해시를 반환한다.
-// 추가 데이터 끝에 포함된 65바이트 시그니처를 제외한 전체 헤더의 해시입니다.
+// extra data 끝에 포함된 65바이트 시그니처를 제외한 전체 헤더의 해시이다.
 func sigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 
@@ -501,6 +501,8 @@ func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error 
 //
 // Finalize는 엉클 블록이 정해지지 않았는지 확인하고,
 // 블록 보상이 주어지지 않았는지 확인한 뒤, 최종 블록을 반환한다.
+// 헤더의 루트를 완성하고 주어진 헤더 + 트렌젝션 + 엉클정보 + 영수증으로
+// 블록을 만든다.
 func (c *BSRR) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	fmt.Println("BSRR.Finalize() 호출")
 	// [Berith] Retrieves the parent block's StakingList.
@@ -641,7 +643,7 @@ func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results cha
 		return err
 	}
 	delay += temp
-
+	fmt.Println("Seal() / delay : ", delay)
 	// Sign all the things!
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
 	if err != nil {
@@ -738,7 +740,7 @@ func (c *BSRR) getStakeTargetBlock(chain consensus.ChainReader, parent *types.He
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
-// SealHash는 블록이 sealing되기 전에 블록의 해시를 반환합니다.
+// SealHash는 블록이 sealing되기 전에 블록의 해시를 반환한다.
 func (c *BSRR) SealHash(header *types.Header) common.Hash {
 	return sigHash(header)
 }

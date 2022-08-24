@@ -52,6 +52,9 @@ The state transitioning model does all the necessary work to work out a valid ne
 5) Run Script section
 6) Derive new state root
 */
+//
+// state transition은 트랜잭션이 현재 월드 상태에 적용될 때 수행되는 변경 사항이다.
+// 상태 전이 모델은 유효한 새 상태 루트를 계산하는 데 필요한 모든 작업을 수행합니다.
 type StateTransition struct {
 	gp         *GasPool
 	msg        Message
