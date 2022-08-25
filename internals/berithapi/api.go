@@ -1288,6 +1288,7 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
+	fmt.Println("berithapi / api.go / submitTransaction () 호출")
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}

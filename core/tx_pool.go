@@ -864,7 +864,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	}
 	// Set the potentially new pending nonce and notify any subsystems of the new tx
 	pool.beats[addr] = time.Now()
-	pool.pendingState.SetNonce(addr, tx.Nonce()+1)
+	pool.pendingState.SetNonce(addr, tx.Nonce()+1) // addr이 tx를 전송 했으므로 카운팅
 
 	return true
 }
@@ -873,6 +873,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // the sender as a local one in the mean time, ensuring it goes around the local
 // pricing constraints.
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
+	fmt.Println("TxPool.AddLocal() 호출")
 	return pool.addTx(tx, !pool.config.NoLocals) // Local
 }
 
@@ -880,6 +881,7 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 // sender is not among the locally tracked ones, full pricing constraints will
 // apply.
 func (pool *TxPool) AddRemote(tx *types.Transaction) error {
+	fmt.Println("TxPool.AddRemote() 호출")
 	return pool.addTx(tx, false)
 }
 
@@ -887,7 +889,7 @@ func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 // marking the senders as a local ones in the mean time, ensuring they go around
 // the local pricing constraints.
 func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
-	fmt.Println("TxPool.AddLocal() 호출")
+	fmt.Println("TxPool.AddLocals() 호출")
 	return pool.addTxs(txs, !pool.config.NoLocals)
 }
 
@@ -895,7 +897,7 @@ func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
 // If the senders are not among the locally tracked ones, full pricing constraints
 // will apply.
 func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
-	fmt.Println("TxPool.AddRemote() 호출")
+	fmt.Println("TxPool.AddRemotes() 호출")
 	return pool.addTxs(txs, false)
 }
 
@@ -1032,7 +1034,7 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 // 보류 중인 트랜잭션 집합으로 이동시킨다. 이 프로세스 중에 무효화된
 // 모든 트랜잭션(Low Nonce, Low Balance)은 삭제된다.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
-	fmt.Println("core.go 990 / TxPool.promoteExecutables() 호출, Accounts : ", accounts)
+	fmt.Println("core.go 990 / TxPool.promoteExecutables() 호출")
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
 

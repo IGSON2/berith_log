@@ -58,7 +58,7 @@ type unconfirmedBlocks struct {
 	chain chainRetriever
 
 	// Depth after which to discard previous blocks
-	// 이전 블록을 폐기할 깊이
+	// 이전 블록을 폐기할 깊이 == 7
 	depth uint
 
 	// Block infos to allow canonical chain cross checks
@@ -83,6 +83,7 @@ func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 	set.Shift(index)
 
 	// Create the new item as its own ring
+	// 1칸짜리 Ring 자료구조 생성
 	item := ring.New(1)
 	item.Value = &unconfirmedBlock{
 		index: index,
@@ -95,6 +96,7 @@ func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 	if set.blocks == nil {
 		set.blocks = item
 	} else {
+		// ring 자료구조의 한칸 뒤로 포커스해서 새로운 item을 연결
 		set.blocks.Move(-1).Link(item)
 	}
 	// Display a log for the user to notify of a new mined block unconfirmed
@@ -108,6 +110,7 @@ func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 // Shift는 확인되지 않은 설정 깊이 허용치를 초과하는 모든 미확인 블록을 세트에서 삭제한 다음
 // 포함 또는 지연 보고서를 작성하기 위해 표준 체인과 대조한다.
 func (set *unconfirmedBlocks) Shift(height uint64) {
+	fmt.Println("unconfirmedBlocks.Shift () 호출 height : ", height)
 	set.lock.Lock()
 	defer set.lock.Unlock()
 

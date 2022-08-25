@@ -521,7 +521,6 @@ func (bc *BlockChain) insert(block *types.Block) {
 	rawdb.WriteHeadBlockHash(bc.db, block.Hash())
 
 	bc.currentBlock.Store(block)
-
 	// If the block is better than our head or is on a different chain, force update heads
 	if updateHeads {
 		bc.hc.SetCurrentHeader(block.Header())
@@ -1010,6 +1009,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		}
 	}
 	if reorg {
+		fmt.Println("WriteBlockWithState / Reorg : ", reorg)
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != currentBlock.Hash() {
 			if err := bc.reorg(currentBlock, block); err != nil {
@@ -1022,12 +1022,12 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 
 		status = CanonStatTy
 	} else {
+		fmt.Println("WriteBlockWithState / Reorg : ", reorg)
 		status = SideStatTy
 	}
 	if err := batch.Write(); err != nil {
 		return NonStatTy, err
 	}
-
 	// Set new head.
 	if status == CanonStatTy {
 		bc.insert(block)

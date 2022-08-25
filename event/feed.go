@@ -163,7 +163,7 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 		// buffer space.
 		for i := firstSubSendCase; i < len(cases); i++ {
 			if cases[i].Chan.TrySend(rvalue) {
-				fmt.Println("Trysend Successfully ! Type : ", rvalue.Type())
+				fmt.Printf("Trysend Successfully ! %v -> %v", rvalue.Type(), cases[i].Chan)
 				nsent++
 				cases = cases.deactivate(i)
 				i--

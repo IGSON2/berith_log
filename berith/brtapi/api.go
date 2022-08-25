@@ -7,10 +7,12 @@ package brtapi
 import (
 	"berith-chain/core"
 	"context"
+	"fmt"
+	"strconv"
+
 	"github.com/BerithFoundation/berith-chain/accounts/keystore"
 	"github.com/BerithFoundation/berith-chain/miner"
 	"github.com/BerithFoundation/berith-chain/rpc"
-	"strconv"
 
 	"math/big"
 
@@ -110,6 +112,7 @@ When this function is called, all staking is released and returned to Main
 After creating Tx and sending it, it is processed by Consensus.
 */
 func (s *PrivateBerithAPI) StopStaking(ctx context.Context, wallet WalletTxArgs) (common.Hash, error) {
+	fmt.Println("PrivateBerithAPI.StopStaking () 호출")
 	sendTx := &SendTxArgs{
 		From:     wallet.From,
 		To:       &wallet.From,
@@ -127,6 +130,7 @@ func (s *PrivateBerithAPI) StopStaking(ctx context.Context, wallet WalletTxArgs)
 Functions that deal with actual transactions
 */
 func (s *PrivateBerithAPI) sendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	fmt.Println("brtapi / api.go / PrivateBerithAPI.sendTransaction () 호출")
 	account := accounts.Account{Address: args.From}
 
 	wallet, err := s.backend.AccountManager().Find(account)
@@ -158,6 +162,7 @@ func (s *PrivateBerithAPI) sendTransaction(ctx context.Context, args SendTxArgs)
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
+	fmt.Println("brtapi / api.go / submitTransaction () 호출")
 	if err := b.SendTx(ctx, tx); err != nil {
 		return common.Hash{}, err
 	}

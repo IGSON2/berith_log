@@ -586,7 +586,7 @@ func (c *BSRR) Finalize(chain consensus.ChainReader, header *types.Header, state
 // Authorize는 새 블록을 생성하기 위해 개인키를 합의엔진에 추가한다.
 // StartMining 에서 berithBase의 주소와 서명을 받아 인증한다.
 func (c *BSRR) Authorize(signer common.Address, signFn SignerFn) {
-	fmt.Println("signer : ", signer)
+	fmt.Println("signer : ", signer.Hex())
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -810,7 +810,7 @@ func (c *BSRR) getDelay(rank int) (time.Duration, error) {
 		return time.Duration(0), err
 	}
 	delay += time.Duration(rank-startRank) * termDelay
-
+	fmt.Printf("GetDelay / Rank : %v , Delay : %v\n", rank, delay)
 	return delay, nil
 }
 

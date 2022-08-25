@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -311,8 +310,8 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		fmt.Println("worker.newWorkLoop 내부 commit() 함수 호출")
 		if interrupt != nil {
 			atomic.StoreInt32(interrupt, s)
-		} // ??
-		interrupt = new(int32)
+		} // 무조건 0으로 초기화?
+		interrupt = new(int32) // interrupt == 0
 		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp}
 		fmt.Println("worker.newWorkch 개방")
 		timer.Reset(recommit)
@@ -349,7 +348,6 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		}
 		w.pendingMu.Unlock()
 	}
-	nextWorkTimer := time.NewTimer(0)
 	for {
 		select {
 		case <-w.startCh:
@@ -360,9 +358,6 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 		case head := <-w.chainHeadCh:
 			fmt.Println("NewWorkLoop() / worker.chainHeadCh 개방 후 하위 로직 실행")
-			nextWorkTimer.Reset(1)
-			<-nextWorkTimer.C
-			fmt.Println(strings.Repeat("=", 50), " next work start!")
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
@@ -411,15 +406,15 @@ func (w *worker) mainLoop() {
 	defer w.txsSub.Unsubscribe()
 	defer w.chainHeadSub.Unsubscribe()
 	defer w.chainSideSub.Unsubscribe()
-
+	var workCnt int
 	for {
 		select {
 		case req := <-w.newWorkCh:
-			fmt.Println("worker.mainLop() / worker.newWorkCh 개방 후 하위 로직 실행")
+			fmt.Println("worker.mainLoop() / worker.newWorkCh 수신")
 			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
-
+			workCnt++
 		case ev := <-w.chainSideCh:
-			fmt.Println("worker.mainLop() / worker.chainSideCh 개방 후 하위 로직 실행")
+			fmt.Println("worker.mainLoop() / worker.chainSideCh 수신")
 			// Short circuit for duplicate side blocks
 			if _, exist := w.localUncles[ev.Block.Hash()]; exist {
 				continue
@@ -516,7 +511,14 @@ func (w *worker) taskLoop() {
 		select {
 		case task := <-w.taskCh:
 			fmt.Println("worker.taskLoop() / worker.taskCh 개방 후 하위 로직 실행, Task : ")
-			fmt.Printf("task.block : %v\ntask.receipts : %v\n", task.block.Number(), task.receipts)
+			fmt.Printf("\tblockNum : %v\n\treceipts : %v\n\tTx : ", task.block.Number(), task.receipts)
+			for _, tx := range task.block.Transactions() {
+				msg, err := tx.AsMessage(types.MakeSigner(w.chain.Config(), task.block.Number()))
+				if err != nil {
+					continue
+				}
+				fmt.Printf("\t\t%v\n", msg)
+			}
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
 			}
@@ -725,7 +727,15 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	w.current.txs = append(w.current.txs, tx)
 	w.current.receipts = append(w.current.receipts, receipt)
 
-	fmt.Println("Transaction applied.\n Receipt : ", w.current.receipts, "\n tx : ", w.current.txs)
+	fmt.Println("Transaction applied. Len (Recept) : ", len(w.current.receipts))
+
+	for i, t := range w.current.txs {
+		msg, err := t.AsMessage(w.current.signer)
+		if err != nil {
+			continue
+		}
+		fmt.Printf("\tTx %02d : %v\n", i+1, msg)
+	}
 	return receipt.Logs, nil
 }
 
@@ -854,6 +864,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 	// than the user-specified one.
 	if interrupt != nil {
 		w.resubmitAdjustCh <- &intervalAdjust{inc: false}
+		fmt.Println("commitTransactions / resubmintAdjustCh{inc : False} 데이터 발신")
 	}
 	return false
 }
@@ -862,6 +873,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 // commintNewWork는 부모 블록을 기반하여 여러개의 확정된 새 작업들을 생성한다.
 func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) {
 	fmt.Println("worker.commitNewWork() 호출")
+
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 

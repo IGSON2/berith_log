@@ -471,7 +471,7 @@ func (s *StateDB) GetPenaltyUpdated(addr common.Address) *big.Int {
 
 // AddBalance adds amount to the account associated with addr.
 func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
-	fmt.Printf("%s added Balance : %v\n", addr, amount)
+	fmt.Printf("%s added Balance : %v\n", addr.Hex(), amount)
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.AddBalance(amount)
@@ -480,7 +480,7 @@ func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 
 // SubBalance subtracts amount from the account associated with addr.
 func (s *StateDB) SubBalance(addr common.Address, amount *big.Int) {
-	fmt.Printf("%s decreased Balance : %v\n", addr, amount)
+	fmt.Printf("%s decreased Balance : %v\n", addr.Hex(), amount)
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SubBalance(amount)
@@ -730,7 +730,7 @@ func (s *StateDB) GetRefund() uint64 {
 // Finalise는 스스로 파괴되는 객체를 지움으로써 상태를 종료한다. 그리고 journal과 refuns를 정리한다.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 	fmt.Println("StateDB.Finalise() 호출")
-	for addr := range s.journal.dirties { // dirties가 뭐길래..?
+	for addr := range s.journal.dirties {
 		stateObject, exist := s.stateObjects[addr]
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
