@@ -100,7 +100,7 @@ func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 		set.blocks.Move(-1).Link(item)
 	}
 	// Display a log for the user to notify of a new mined block unconfirmed
-	log.Info("🔨 mined potential block", "number", index, "hash", hash)
+	log.Info("🔨 mined potential block", "number", index, "hash", hash, "Total blocks", set.blocks.Len())
 }
 
 // Shift drops all unconfirmed blocks from the set which exceed the unconfirmed sets depth
@@ -119,6 +119,7 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 		// 다음 미확인 블록을 검색하고 생성된 지 얼마 안됐다면 처리를 중단한다.
 		next := set.blocks.Value.(*unconfirmedBlock)
 		if next.index+uint64(set.depth) > height {
+			fmt.Printf("unconfirmedBlocks.Shift () / Break ! \n idx+depth : %v , height : %v", next.index+uint64(set.depth), height)
 			break
 		}
 		// Block seems to exceed depth allowance, check for canonical status
@@ -132,6 +133,7 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 		default:
 			// Block is not canonical, check whether we have an uncle or a lost block
 			// 블록이 정본이 아니라면, 엉클블록으로 가져올지, 블록을 포기할지 확인한다.
+			fmt.Println("unconfirmedBlocks.Shift () / block is not canonical")
 			included := false
 			for number := next.index; !included && number < next.index+uint64(set.depth) && number <= height; number++ {
 				if block := set.chain.GetBlockByNumber(number); block != nil {

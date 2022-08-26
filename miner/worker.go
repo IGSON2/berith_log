@@ -511,14 +511,8 @@ func (w *worker) taskLoop() {
 		select {
 		case task := <-w.taskCh:
 			fmt.Println("worker.taskLoop() / worker.taskCh 개방 후 하위 로직 실행, Task : ")
-			fmt.Printf("\tblockNum : %v\n\treceipts : %v\n\tTx : ", task.block.Number(), task.receipts)
-			for _, tx := range task.block.Transactions() {
-				msg, err := tx.AsMessage(types.MakeSigner(w.chain.Config(), task.block.Number()))
-				if err != nil {
-					continue
-				}
-				fmt.Printf("\t\t%v\n", msg)
-			}
+			fmt.Printf("\tblockNum : %v\n\treceipts : %v\n\tTx : %d", task.block.Number(), task.receipts, task.block.Transactions().Len())
+
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
 			}
@@ -592,6 +586,7 @@ func (w *worker) resultLoop() {
 				logs = append(logs, receipt.Logs...)
 			}
 			// Commit block and state to database.
+			// 블록과 스테이트를 DB에 기록한다.
 			stat, err := w.chain.WriteBlockWithState(block, receipts, task.state)
 			if err != nil {
 				log.Error("Failed writing block to chain", "err", err)

@@ -718,10 +718,10 @@ func (c *BSRR) getStakeTargetBlock(chain consensus.ChainReader, parent *types.He
 	var targetNumber uint64
 	blockNumber := parent.Number.Uint64()
 	d := blockNumber / c.config.Epoch
-
+	fmt.Println("BSRR.getStakeTargetBlock / d : ", blockNumber/c.config.Epoch, "Epoch : ", c.config.Epoch)
 	// 블록 높이가 360 이상이면 여기로
 	if d > 1 {
-		// 부모 블록의 1에포크 전 블록헤더와 블록과 State 존재 유무을 구한다. (current - (1+epoch))
+		// 부모 블록의 1에포크 전 블록헤더의 블록과 State 존재 유무을 구한다. (current - (1+epoch))
 		return c.getAncestor(chain, int64(c.config.Epoch), parent)
 	}
 
