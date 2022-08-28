@@ -215,11 +215,14 @@ func (c *Client) nextID() json.RawMessage {
 
 // SupportedModules calls the rpc_modules method, retrieving the list of
 // APIs that are available on the server.
+//
+// SupportedModules는 서버에서 이용 가능한 API목록을 탐색하여 rpc_modules 메서드를 불러온다.
 func (c *Client) SupportedModules() (map[string]string, error) {
 	var result map[string]string
 	ctx, cancel := context.WithTimeout(context.Background(), subscribeTimeout)
 	defer cancel()
 	err := c.CallContext(ctx, &result, "rpc_modules")
+	fmt.Println("SupportedModules / ", result)
 	return result, err
 }
 
@@ -250,8 +253,12 @@ func (c *Client) Call(result interface{}, method string, args ...interface{}) er
 //
 // The result must be a pointer so that package json can unmarshal into it. You
 // can also pass nil, in which case the result is ignored.
+//
+// CallContext는 주어진 인자를 통해 JSON-RPC 호출을 수행한다. 호출이 성공적으로
+// 반환되기 전에 컨텍스트가 취소되면, 이 함수는 즉시 반환된다.
 func (c *Client) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
 	msg, err := c.newMessage(method, args...)
+	fmt.Println("Client.CallContext () 호출 / msg : ", msg, " is HTTP ? ", c.isHTTP)
 	if err != nil {
 		return err
 	}
@@ -354,6 +361,7 @@ func (c *Client) BatchCallContext(ctx context.Context, b []BatchElem) error {
 
 // EthSubscribe registers a subscripion under the "berith" namespace.
 func (c *Client) BerithSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	fmt.Println("Client.BerithSubscribe() 호출, channel : ", reflect.TypeOf(channel))
 	return c.Subscribe(ctx, "berith", channel, args...)
 }
 
@@ -375,6 +383,7 @@ func (c *Client) ShhSubscribe(ctx context.Context, channel interface{}, args ...
 // ErrSubscriptionQueueOverflow. Use a sufficiently large buffer on the channel or ensure
 // that the channel usually has at least one reader to prevent this issue.
 func (c *Client) Subscribe(ctx context.Context, namespace string, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	fmt.Println("Client.Subscribe() 호출 / namespace : ", namespace)
 	// Check type of channel first.
 	chanVal := reflect.ValueOf(channel)
 	if chanVal.Kind() != reflect.Chan || chanVal.Type().ChanDir()&reflect.SendDir == 0 {
@@ -477,6 +486,9 @@ func (c *Client) reconnect(ctx context.Context) error {
 // dispatch is the main loop of the client.
 // It sends read messages to waiting calls to Call and BatchCall
 // and subscription notifications to registered subscriptions.
+//
+// dispatch는 클라이언트의 메인 루프이다.
+// Call 및 BatchCall 대기 중인 호출에 읽기 메시지를 보내고 등록된 구독에 구독 알림을 보낸다.
 func (c *Client) dispatch(conn net.Conn) {
 	// Spawn the initial read loop.
 	go c.read(conn)

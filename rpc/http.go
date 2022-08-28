@@ -166,6 +166,7 @@ func (c *Client) sendBatchHTTP(ctx context.Context, op *requestOp, msgs []*jsonr
 }
 
 func (hc *httpConn) doRequest(ctx context.Context, msg interface{}) (io.ReadCloser, error) {
+	fmt.Println("httpConn.doRequest () 호출")
 	body, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err

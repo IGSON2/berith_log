@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/BerithFoundation/berith-chain"
+	berith_chain "github.com/BerithFoundation/berith-chain"
 	"github.com/BerithFoundation/berith-chain/common"
 	"github.com/BerithFoundation/berith-chain/common/hexutil"
 	"github.com/BerithFoundation/berith-chain/core/types"
@@ -310,6 +310,7 @@ func (ec *Client) SyncProgress(ctx context.Context) (*berith_chain.SyncProgress,
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
 func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (berith_chain.Subscription, error) {
+	fmt.Println("client.SubscribeNewHead () 호출")
 	return ec.c.BerithSubscribe(ctx, ch, "newHeads")
 }
 
@@ -375,6 +376,7 @@ func (ec *Client) FilterLogs(ctx context.Context, q berith_chain.FilterQuery) ([
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (ec *Client) SubscribeFilterLogs(ctx context.Context, q berith_chain.FilterQuery, ch chan<- types.Log) (berith_chain.Subscription, error) {
+	fmt.Println("client.SubscripbeFilterLogs () 호출")
 	arg, err := toFilterArg(q)
 	if err != nil {
 		return nil, err
