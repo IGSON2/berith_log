@@ -189,5 +189,8 @@ func adjustStateForBIP4(config *params.ChainConfig, statedb *state.StateDB, head
 func checkBreakTransaction(msg types.Message, blockNumber *big.Int, period uint64) bool {
 	lockUpPeriod := big.NewInt(int64((60 * 60 * 24 * 3) / period)) // Created blocks in 3 days
 	elapsedBlockNumber := new(big.Int).Sub(blockNumber, new(big.Int).SetBytes(msg.Data()))
+	if msg.Base() == types.Stake && msg.Target() == types.Main {
+		fmt.Printf("ElapsedBlockNumber : %v, LockupPeriod : %v\n", elapsedBlockNumber, lockUpPeriod)
+	}
 	return elapsedBlockNumber.Cmp(lockUpPeriod) == 1
 }

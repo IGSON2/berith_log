@@ -258,7 +258,6 @@ func (c *Client) Call(result interface{}, method string, args ...interface{}) er
 // 반환되기 전에 컨텍스트가 취소되면, 이 함수는 즉시 반환된다.
 func (c *Client) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
 	msg, err := c.newMessage(method, args...)
-	fmt.Println("Client.CallContext () 호출 / msg : ", msg, " is HTTP ? ", c.isHTTP)
 	if err != nil {
 		return err
 	}

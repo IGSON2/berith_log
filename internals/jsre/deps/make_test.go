@@ -22,7 +22,7 @@ func TestAsset(t *testing.T) {
 	)
 	check(err)
 
-	f, e := os.Create(os.TempDir() + "/web3.js")
+	f, e := os.Create(os.TempDir() + "/tempweb3.js")
 	if e == nil {
 		if _, er := f.Write(src); er == nil {
 			w := bufio.NewWriter(f)

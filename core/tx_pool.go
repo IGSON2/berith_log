@@ -711,7 +711,7 @@ func CheckStakeBalanceAmount(totalStakingAmount, maximum *big.Int) bool {
 // 트랜잭션이 이미 보류 중이거나 대기 중인 트랜잭션을 대체할 경우 이전 트랜잭션을 덮어쓰고 이를
 // 반환하여 외부 코드가 불필요하게 프로모트를 호출하지 않습니다.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
-	fmt.Println("TxPool.add() 호출, TX : ", tx)
+	fmt.Println("TxPool.add() 호출, TX Value : ", tx.Value())
 	// If the transaction is already known, discard it
 	// 트랜잭션이 이미 알고있는것 이라면 무시한다.
 	hash := tx.Hash()

@@ -979,7 +979,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 	// Short circuit if there is no available pending transactions
 	if len(pending) == 0 {
-		log.Warn("Pending length is 0")
+		fmt.Println("Pending length is 0")
 		w.updateSnapshot()
 		return
 	}

@@ -11,12 +11,12 @@
       "bip1Block": 0,
       "bip2Block": 0,
       "bip3Block": 0,
-      "bip4Block": 100,
+      "bip4Block": 1,
       "bsrr": {
         "period": 10,
         "epoch": 10,
-        "rewards": 100000000000000000,
-        "stakeminimum": 100000000000000000000000,
+        "rewards": 1000000000000000000,
+        "stakeminimum": 1000000000000000000,
         "limitStakeBalance": 50000000000000000000000000,
         "slashRound": 1,
         "forkfactor": 0
