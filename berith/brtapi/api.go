@@ -7,6 +7,7 @@ package brtapi
 import (
 	"berith-chain/core"
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -158,6 +159,29 @@ func (s *PrivateBerithAPI) sendTransaction(ctx context.Context, args SendTxArgs)
 	}
 
 	return submitTransaction(ctx, s.backend, signed)
+}
+
+func (s *PrivateBerithAPI) Burn(ctx context.Context, wallet WalletTxArgs) (common.Hash, error) {
+	state, _, err := s.backend.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return common.Hash{}, err
+	}
+	balance := state.GetBalance(wallet.From)
+	if balance.Cmp(wallet.Value.ToInt()) < 0 {
+		return common.Hash{}, errors.New("not too much balance")
+	}
+	sendTx := &SendTxArgs{
+		From:     wallet.From,
+		To:       &wallet.From,
+		Value:    wallet.Value,
+		Base:     types.Main,
+		Target:   types.Main,
+		Gas:      wallet.Gas,
+		GasPrice: wallet.GasPrice,
+		Nonce:    wallet.Nonce,
+	}
+	return s.sendTransaction(ctx, *sendTx)
+
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.

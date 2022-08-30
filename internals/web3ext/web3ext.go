@@ -513,6 +513,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'burn',
+			call: 'berith_burn',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'stopStaking',
 			call: 'berith_stopStaking',
 			params: 1,

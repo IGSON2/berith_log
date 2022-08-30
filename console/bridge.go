@@ -31,6 +31,9 @@ import (
 
 // bridge is a collection of JavaScript utility methods to bride the .js runtime
 // environment and the Go RPC connection backing the remote method calls.
+//
+// bridge는 .js 런타임 환경과 원격 메서드 호출을 지원하는 GoRPC 연결을 중계하기 위한
+// 자바스크립트 유틸리티 메서드의 모음입니다.
 type bridge struct {
 	client   *rpc.Client  // RPC client to execute Berith requests through
 	prompter UserPrompter // Input prompter to allow interactive user feedback

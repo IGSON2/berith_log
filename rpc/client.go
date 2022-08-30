@@ -218,11 +218,12 @@ func (c *Client) nextID() json.RawMessage {
 //
 // SupportedModules는 서버에서 이용 가능한 API목록을 탐색하여 rpc_modules 메서드를 불러온다.
 func (c *Client) SupportedModules() (map[string]string, error) {
+	fmt.Println("Client.SupportedModules() 호출")
 	var result map[string]string
 	ctx, cancel := context.WithTimeout(context.Background(), subscribeTimeout)
 	defer cancel()
 	err := c.CallContext(ctx, &result, "rpc_modules")
-	fmt.Println("SupportedModules / ", result)
+	fmt.Println("Client.SupportedModules() / Result : ", result)
 	return result, err
 }
 
@@ -258,6 +259,7 @@ func (c *Client) Call(result interface{}, method string, args ...interface{}) er
 // 반환되기 전에 컨텍스트가 취소되면, 이 함수는 즉시 반환된다.
 func (c *Client) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
 	msg, err := c.newMessage(method, args...)
+	fmt.Printf("Callcontext () 호출 / method : %s, args : %v,msg : %v\n", method, args, msg)
 	if err != nil {
 		return err
 	}
@@ -426,7 +428,10 @@ func (c *Client) newMessage(method string, paramsIn ...interface{}) (*jsonrpcMes
 
 // send registers op with the dispatch loop, then sends msg on the connection.
 // if sending fails, op is deregistered.
+//
+// send는 dispatch 루프에 op를 등록하고 커넥션으로 메시지를 전송한다.
 func (c *Client) send(ctx context.Context, op *requestOp, msg interface{}) error {
+	fmt.Println("Client.send() 호출, msg : ", msg)
 	select {
 	case c.requestOp <- op:
 		log.Trace("", "msg", log.Lazy{Fn: func() string {
@@ -459,6 +464,7 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 	}
 	c.writeConn.SetWriteDeadline(deadline)
 	err := json.NewEncoder(c.writeConn).Encode(msg)
+	fmt.Println("Client.write() / msg : ", msg)
 	c.writeConn.SetWriteDeadline(time.Time{})
 	if err != nil {
 		c.writeConn = nil
@@ -524,16 +530,19 @@ func (c *Client) dispatch(conn net.Conn) {
 			for _, msg := range batch {
 				switch {
 				case msg.isNotification():
+					fmt.Println("Client.dispatch / batch == Notification")
 					log.Trace("", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: notification ", msg)
 					}})
 					c.handleNotification(msg)
 				case msg.isResponse():
+					fmt.Println("Client.dispatch / batch == Response")
 					log.Trace("", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: response ", msg)
 					}})
 					c.handleResponse(msg)
 				default:
+					fmt.Println("Client.dispatch / batch == None")
 					log.Debug("", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: dropping weird message", msg)
 					}})
@@ -623,6 +632,7 @@ func (c *Client) handleNotification(msg *jsonrpcMessage) {
 
 func (c *Client) handleResponse(msg *jsonrpcMessage) {
 	op := c.respWait[string(msg.ID)]
+	fmt.Printf("Client.handleResponse () / msg : %v, op : %v\n", msg, op)
 	if op == nil {
 		log.Debug("unsolicited response", "msg", msg)
 		return
@@ -670,6 +680,7 @@ func (c *Client) read(conn net.Conn) error {
 
 	for {
 		resp, err := readMessage()
+		fmt.Println("Client.read() / resp : ", resp)
 		if err != nil {
 			c.readErr <- err
 			return err

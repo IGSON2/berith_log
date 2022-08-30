@@ -179,6 +179,7 @@ func adjustStateForBIP4(config *params.ChainConfig, statedb *state.StateDB, head
 		selectionPoint := staking.CalcPointBigint(config.Bsrr.LimitStakeBalance, big.NewInt(0), currentBlock, lastStkBlock, config.Bsrr.Period)
 		statedb.SetPoint(*recipient, selectionPoint)
 	}
+
 }
 
 /*
@@ -192,5 +193,9 @@ func checkBreakTransaction(msg types.Message, blockNumber *big.Int, period uint6
 	if msg.Base() == types.Stake && msg.Target() == types.Main {
 		fmt.Printf("ElapsedBlockNumber : %v, LockupPeriod : %v\n", elapsedBlockNumber, lockUpPeriod)
 	}
+
+	//Temp value
+	lockUpPeriod = big.NewInt(1)
+
 	return elapsedBlockNumber.Cmp(lockUpPeriod) == 1
 }

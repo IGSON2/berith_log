@@ -233,6 +233,12 @@ func (st *StateTransition) TransitionDb(base types.JobWallet, target types.JobWa
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+
+		// "Burn" custom temporary command test
+		if (base == types.Main || target == types.Main) && bytes.Equal(sender.Address().Bytes(), msg.To().Bytes()) {
+			st.evm.StateDB.SubBalance(sender.Address(), st.value)
+		}
+
 		// [BERITH] staking value false
 		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, st.value, base, target)
 	}

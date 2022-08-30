@@ -30,6 +30,7 @@ import (
 
 	"berith-chain/internals/jsre"
 	"berith-chain/internals/web3ext"
+
 	"github.com/BerithFoundation/berith-chain/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
@@ -107,6 +108,7 @@ func New(config Config) (*Console, error) {
 // init retrieves the available APIs from the remote RPC provider and initializes
 // the console's JavaScript namespaces based on the exposed modules.
 func (c *Console) init(preload []string) error {
+	fmt.Println("Console.init() 호출")
 	// Initialize the JavaScript <-> Go RPC bridge
 	bridge := newBridge(c.client, c.prompter, c.printer)
 	c.jsre.Set("jeth", struct{}{})

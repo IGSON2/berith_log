@@ -76,6 +76,7 @@ JavaScript API. See https://github.com/BerithFoundation/berith-chain/wiki/JavaSc
 // localConsole starts a new berith node, attaching a JavaScript console to it at the
 // same time.
 func localConsole(ctx *cli.Context) error {
+	fmt.Println("localConsole() 호출")
 	// Create and start the node based on the CLI flags
 	node := makeFullNode(ctx)
 	startNode(ctx, node)
@@ -114,6 +115,7 @@ func localConsole(ctx *cli.Context) error {
 // remoteConsole will connect to a remote berith instance, attaching a JavaScript
 // console to it.
 func remoteConsole(ctx *cli.Context) error {
+	fmt.Println("remoteConsole() 호출")
 	// Attach to a remotely running berith instance and start the JavaScript console
 	endpoint := ctx.Args().First()
 	if endpoint == "" {
