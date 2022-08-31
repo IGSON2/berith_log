@@ -468,8 +468,7 @@ func (pool *TxPool) Stop() {
 // starts sending event to the given channel.
 func (pool *TxPool) SubscribeNewTxsEvent(ch chan<- NewTxsEvent) event.Subscription {
 	fmt.Println("TxPool.SubscribenewTxsEvent() 호출")
-	// txFeed가 여기서 NewTxsEvent타입의 채널을 Subscribe하고 있기 때문에
-	// 다른 객체의 NewTxsEvent 채널이
+
 	return pool.scope.Track(pool.txFeed.Subscribe(ch))
 }
 
@@ -709,7 +708,7 @@ func CheckStakeBalanceAmount(totalStakingAmount, maximum *big.Int) bool {
 //
 // add는 향후 보류 중인 승격 및 실행을 위해 트랜잭션을 검증하고 취소할 수 없는 대기열에 삽입한다.
 // 트랜잭션이 이미 보류 중이거나 대기 중인 트랜잭션을 대체할 경우 이전 트랜잭션을 덮어쓰고 이를
-// 반환하여 외부 코드가 불필요하게 프로모트를 호출하지 않습니다.
+// 반환하여 외부 코드가 불필요하게 프로모트를 호출하지 않는다.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	fmt.Println("TxPool.add() 호출, TX Value : ", tx.Value())
 	// If the transaction is already known, discard it

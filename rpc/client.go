@@ -632,7 +632,6 @@ func (c *Client) handleNotification(msg *jsonrpcMessage) {
 
 func (c *Client) handleResponse(msg *jsonrpcMessage) {
 	op := c.respWait[string(msg.ID)]
-	fmt.Printf("Client.handleResponse () / msg : %v, op : %v\n", msg, op)
 	if op == nil {
 		log.Debug("unsolicited response", "msg", msg)
 		return
@@ -680,7 +679,6 @@ func (c *Client) read(conn net.Conn) error {
 
 	for {
 		resp, err := readMessage()
-		fmt.Println("Client.read() / resp : ", resp)
 		if err != nil {
 			c.readErr <- err
 			return err

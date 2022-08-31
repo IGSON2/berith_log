@@ -695,6 +695,7 @@ func (c *BSRR) getAncestor(chain consensus.ChainReader, n int64, header *types.H
 	}
 
 	if target == nil {
+		fmt.Println("BSRR.getAncestor() / target is nil !")
 		return &types.Header{}, false
 	}
 

@@ -149,7 +149,6 @@ func (n *Node) Start() error {
 	if err := n.openDataDir(); err != nil {
 		return err
 	}
-
 	// Initialize the p2p server. This creates the node key and
 	// discovery databases.
 	n.serverConfig = n.config.P2P
@@ -191,7 +190,6 @@ func (n *Node) Start() error {
 			return &DuplicateServiceError{Kind: kind}
 		}
 		services[kind] = service
-		fmt.Println(kind, " service is running !")
 	}
 	// Gather the protocols and start the freshly assembled P2P server
 	for _, service := range services {
@@ -214,8 +212,6 @@ func (n *Node) Start() error {
 			running.Stop()
 
 			return err
-		} else {
-			fmt.Println(reflect.TypeOf(service), " service start !, kind : ", kind)
 		}
 		// Mark the service started for potential cleanup
 		started = append(started, kind)
@@ -277,17 +273,20 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		n.stopInProc()
 		return err
 	}
+	fmt.Println("StartIPC PASS")
 	if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
 		n.stopIPC()
 		n.stopInProc()
 		return err
 	}
+	fmt.Println("StartHTTP PASS")
 	if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
 		n.stopHTTP()
 		n.stopIPC()
 		n.stopInProc()
 		return err
 	}
+	fmt.Println("StartWS PASS")
 	// All API endpoints started successfully
 	n.rpcAPIs = apis
 	return nil

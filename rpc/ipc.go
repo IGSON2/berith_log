@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/BerithFoundation/berith-chain/log"
@@ -26,8 +27,10 @@ import (
 
 // ServeListener accepts connections on l, serving JSON-RPC on them.
 func (srv *Server) ServeListener(l net.Listener) error {
+	fmt.Println("Server.ServeListner () 호출")
 	for {
 		conn, err := l.Accept()
+		fmt.Println("Server.ServeListner () / Conn : ", conn)
 		if netutil.IsTemporaryError(err) {
 			log.Warn("IPC accept error", "err", err)
 			continue

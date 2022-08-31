@@ -658,18 +658,16 @@ running:
 
 		select {
 		case <-srv.quit:
-			// fmt.Println("Server.quit 개방")
 			// The server was stopped. Run the cleanup logic.
 			break running
 		case n := <-srv.addstatic:
-			// fmt.Println("Server.addstatic 개방")
 			// This channel is used by AddPeer to add to the
 			// ephemeral static peer list. Add it to the dialer,
 			// it will keep the node connected.
+			fmt.Println("Server.Run () / staticnode detected")
 			srv.log.Trace("Adding static node", "node", n)
 			dialstate.addStatic(n)
 		case n := <-srv.removestatic:
-			// fmt.Println("Server.removestatic 개방")
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
 			// stop keeping the node connected.
@@ -679,9 +677,9 @@ running:
 				p.Disconnect(DiscRequested)
 			}
 		case n := <-srv.addtrusted:
-			// fmt.Println("Server.addtrusted 개방")
 			// This channel is used by AddTrustedPeer to add an enode
 			// to the trusted node set.
+			fmt.Println("Server.Run () / trustednode detected detected")
 			srv.log.Trace("Adding trusted node", "node", n)
 			trusted[n.ID()] = true
 			// Mark any already-connected peer as trusted
@@ -689,7 +687,6 @@ running:
 				p.rw.set(trustedConn, true)
 			}
 		case n := <-srv.removetrusted:
-			// fmt.Println("Server.removetrusted 개방")
 			// This channel is used by RemoveTrustedPeer to remove an enode
 			// from the trusted node set.
 			srv.log.Trace("Removing trusted node", "node", n)
@@ -705,7 +702,6 @@ running:
 			op(peers)
 			srv.peerOpDone <- struct{}{}
 		case t := <-taskdone:
-			// fmt.Println("taskdone 개방 후 하위로직 실행")
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
@@ -713,7 +709,6 @@ running:
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
 		case c := <-srv.posthandshake:
-			// fmt.Println("Server.posthandshake 개방")
 			// A connection has passed the encryption handshake so
 			// the remote identity is known (but hasn't been verified yet).
 			if trusted[c.node.ID()] {
@@ -727,9 +722,9 @@ running:
 				break running
 			}
 		case c := <-srv.addpeer:
-			// fmt.Println("Server.addpeer 개방")
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
+			fmt.Println("Server.Run () / addpeer detected")
 			err := srv.protoHandshakeChecks(peers, inboundCount, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
