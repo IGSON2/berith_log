@@ -84,6 +84,8 @@ func isSubscriptionType(t reflect.Type) bool {
 
 // isPubSub tests whether the given method has as as first argument a context.Context
 // and returns the pair (Subscription, error)
+//
+// 메서드가 func (context)(subscription,error){} 타입인지 검사함
 func isPubSub(methodType reflect.Type) bool {
 	// numIn(0) is the receiver type
 	if methodType.NumIn() < 2 || methodType.NumOut() != 2 {
@@ -107,11 +109,14 @@ func formatName(name string) string {
 // suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria
 // for a RPC callback or a subscription callback and adds it to the collection of callbacks or subscriptions. See server
 // documentation for a summary of these criteria.
+//
+// suitableCallbacks은 주어진 타입의 모든 메서들을 반복한다. 메서드가 RPC 콜백 또는 구독 콜백 표준을 만족하는지
+// 밝혀내고, 콜백 구독 컬랙션에 추가한다.
 func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscriptions) {
 	callbacks := make(callbacks)
 	subscriptions := make(subscriptions)
 
-METHODS:
+METHODS: // 타입의 모든 메서드들을 탐색함
 	for m := 0; m < typ.NumMethod(); m++ {
 		method := typ.Method(m)
 		mtype := method.Type

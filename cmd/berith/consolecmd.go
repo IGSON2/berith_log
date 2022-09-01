@@ -115,9 +115,9 @@ func localConsole(ctx *cli.Context) error {
 // remoteConsole will connect to a remote berith instance, attaching a JavaScript
 // console to it.
 func remoteConsole(ctx *cli.Context) error {
-	fmt.Println("remoteConsole() 호출")
 	// Attach to a remotely running berith instance and start the JavaScript console
 	endpoint := ctx.Args().First()
+	fmt.Println("remoteConsole() 호출 / endpoint : ", endpoint)
 	if endpoint == "" {
 		path := node.DefaultDataDir()
 		if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
@@ -163,6 +163,7 @@ func remoteConsole(ctx *cli.Context) error {
 // The check for empty endpoint implements the defaulting logic
 // for "berith attach" and "berith monitor" with no argument.
 func dialRPC(endpoint string) (*rpc.Client, error) {
+	fmt.Println("dialRPC () 호출")
 	if endpoint == "" {
 		endpoint = node.DefaultIPCEndpoint(clientIdentifier)
 	} else if strings.HasPrefix(endpoint, "rpc:") || strings.HasPrefix(endpoint, "ipc:") {

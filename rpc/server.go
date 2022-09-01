@@ -85,7 +85,6 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 	svc.typ = reflect.TypeOf(rcvr)
 	rcvrVal := reflect.ValueOf(rcvr)
 
-	fmt.Println("Server.RegisterName() 호출 , name : ", name, "Type : ", svc.typ)
 	if name == "" {
 		return fmt.Errorf("no service name for type %s", svc.typ.String())
 	}
@@ -123,6 +122,9 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 // If singleShot is true it will process a single request, otherwise it will handle
 // requests until the codec returns an error when reading a request (in most cases
 // an EOF). It executes requests in parallel when singleShot is false.
+//
+// serveRequest는 코덱을 통해 들어오는 요청을 읽고 RPC 콜백을 호출한 뒤
+// 주어진 코덱에 응답을 기록할 것이다.
 func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot bool, options CodecOption) error {
 	var pend sync.WaitGroup
 
@@ -145,6 +147,7 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	// if the codec supports notification include a notifier that callbacks can use
 	// to send notification to clients. It is tied to the codec/connection. If the
 	// connection is closed the notifier will stop and cancels all active subscriptions.
+	// 코덱이 알림을 지원하는 경우 콜백이 클라이언트에 알림을 보내는 데 사용할 수 있는 알림이 포함된다.
 	if options&OptionSubscriptions == OptionSubscriptions {
 		ctx = context.WithValue(ctx, notifierKey{}, newNotifier(codec))
 	}
@@ -257,7 +260,7 @@ func (s *Server) createSubscription(ctx context.Context, c ServerCodec, req *ser
 	return reply[0].Interface().(*Subscription).ID, nil
 }
 
-// handle executes a request and returns the response from the callback.
+// handle executes a request and returns the response from the callback. req : 코덱을 통해 읽어온 요청 정보
 func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
 	fmt.Printf("Server.handle() 호출 codec : %v\treq callb method : %v\tcallb isSub : %v\n", codec, req.callb.method, req.callb.isSubscribe)
 	if req.err != nil {
@@ -409,7 +412,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			}
 			continue
 		}
-
+		// registerName에서 api namespace를 키 값으로 등록했던 api 객체
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
 			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
 			continue

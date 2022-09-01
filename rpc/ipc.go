@@ -29,8 +29,9 @@ import (
 func (srv *Server) ServeListener(l net.Listener) error {
 	fmt.Println("Server.ServeListner () 호출")
 	for {
+		// 리스너에 새로운 연결이 감지될 때 까지 대기
 		conn, err := l.Accept()
-		fmt.Println("Server.ServeListner () / Conn : ", conn)
+		fmt.Println("ServeListner / Accepted ! conn : ", conn.RemoteAddr())
 		if netutil.IsTemporaryError(err) {
 			log.Warn("IPC accept error", "err", err)
 			continue
@@ -49,6 +50,7 @@ func (srv *Server) ServeListener(l net.Listener) error {
 // The context is used for the initial connection establishment. It does not
 // affect subsequent interactions with the client.
 func DialIPC(ctx context.Context, endpoint string) (*Client, error) {
+	fmt.Println("DialIPC () 호출")
 	return newClient(ctx, func(ctx context.Context) (net.Conn, error) {
 		return newIPCConnection(ctx, endpoint)
 	})

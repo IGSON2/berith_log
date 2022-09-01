@@ -155,6 +155,7 @@ func (op *requestOp) wait(ctx context.Context) (*jsonrpcMessage, error) {
 //
 // The client reconnects automatically if the connection is lost.
 func Dial(rawurl string) (*Client, error) {
+	fmt.Println("Dial () 호출")
 	return DialContext(context.Background(), rawurl)
 }
 
@@ -167,6 +168,7 @@ func DialContext(ctx context.Context, rawurl string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("DialContext 호출, rawURL : ", rawurl, " Scheme : ", u.Scheme)
 	switch u.Scheme {
 	case "http", "https":
 		return DialHTTP(rawurl)
@@ -182,6 +184,7 @@ func DialContext(ctx context.Context, rawurl string) (*Client, error) {
 }
 
 func newClient(initctx context.Context, connectFunc func(context.Context) (net.Conn, error)) (*Client, error) {
+	fmt.Println("rpc / newClient () 호출")
 	conn, err := connectFunc(initctx)
 	if err != nil {
 		return nil, err
@@ -203,6 +206,7 @@ func newClient(initctx context.Context, connectFunc func(context.Context) (net.C
 		subs:        make(map[string]*ClientSubscription),
 	}
 	if !isHTTP {
+		// p2를 dispatch하는 클라이언트
 		go c.dispatch(conn)
 	}
 	return c, nil
@@ -495,6 +499,7 @@ func (c *Client) reconnect(ctx context.Context) error {
 // dispatch는 클라이언트의 메인 루프이다.
 // Call 및 BatchCall 대기 중인 호출에 읽기 메시지를 보내고 등록된 구독에 구독 알림을 보낸다.
 func (c *Client) dispatch(conn net.Conn) {
+	fmt.Println("Client.dispatch() 호출")
 	// Spawn the initial read loop.
 	go c.read(conn)
 
@@ -684,6 +689,7 @@ func (c *Client) read(conn net.Conn) error {
 			return err
 		}
 		c.readResp <- resp
+		fmt.Println("Client.read() 호출")
 	}
 }
 

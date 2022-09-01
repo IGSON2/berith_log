@@ -18,14 +18,21 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"net"
 )
 
 // DialInProc attaches an in-process connection to the given RPC server.
+//
+// DialInProc는 지정된 RPC 서버에 in-process 연결한다.
 func DialInProc(handler *Server) *Client {
+	fmt.Println("DialInProc () 호출")
 	initctx := context.Background()
 	c, _ := newClient(initctx, func(context.Context) (net.Conn, error) {
+		fmt.Println("ConnetctFunc() 호출")
 		p1, p2 := net.Pipe()
+		// node의 inprocHandler가 p1으로 수신되는 코덱에 대한 serveCodec을 수행함
+		// p1가 수신했던 데이터는 p2에서 전송되었음
 		go handler.ServeCodec(NewJSONCodec(p1), OptionMethodInvocation|OptionSubscriptions)
 		return p2, nil
 	})

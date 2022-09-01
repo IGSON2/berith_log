@@ -52,7 +52,9 @@ type Node struct {
 	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
 	services     map[reflect.Type]Service // Currently running services
 
-	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
+	rpcAPIs []rpc.API // List of APIs currently provided by the node
+
+	// API 요청을 처리하기 위한 프로세스 내부의 RPC 요청 핸들러
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
 	ipcEndpoint string       // IPC endpoint to listen at (empty = IPC disabled)
@@ -273,20 +275,17 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 		n.stopInProc()
 		return err
 	}
-	fmt.Println("StartIPC PASS")
 	if err := n.startHTTP(n.httpEndpoint, apis, n.config.HTTPModules, n.config.HTTPCors, n.config.HTTPVirtualHosts, n.config.HTTPTimeouts); err != nil {
 		n.stopIPC()
 		n.stopInProc()
 		return err
 	}
-	fmt.Println("StartHTTP PASS")
 	if err := n.startWS(n.wsEndpoint, apis, n.config.WSModules, n.config.WSOrigins, n.config.WSExposeAll); err != nil {
 		n.stopHTTP()
 		n.stopIPC()
 		n.stopInProc()
 		return err
 	}
-	fmt.Println("StartWS PASS")
 	// All API endpoints started successfully
 	n.rpcAPIs = apis
 	return nil

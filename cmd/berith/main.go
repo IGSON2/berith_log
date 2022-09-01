@@ -28,12 +28,13 @@ import (
 
 	"github.com/BerithFoundation/berith-chain/berith"
 
+	"berith-chain/internals/debug"
+
 	"github.com/BerithFoundation/berith-chain/accounts"
 	"github.com/BerithFoundation/berith-chain/accounts/keystore"
 	"github.com/BerithFoundation/berith-chain/berithclient"
 	"github.com/BerithFoundation/berith-chain/cmd/utils"
 	"github.com/BerithFoundation/berith-chain/console"
-	"berith-chain/internals/debug"
 	"github.com/BerithFoundation/berith-chain/log"
 	"github.com/BerithFoundation/berith-chain/metrics"
 	"github.com/BerithFoundation/berith-chain/node"
@@ -276,6 +277,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 	go func() {
 		// Create a chain state reader for self-derivation
+		// pipe 반대편을 dispatch하는 클라이언트
 		rpcClient, err := stack.Attach()
 		if err != nil {
 			utils.Fatalf("Failed to attach to self: %v", err)
@@ -313,6 +315,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}()
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
+		fmt.Printf("startNode() / miningEnabled = %v, Developer = %v\n", ctx.GlobalBool(utils.MiningEnabledFlag.Name), ctx.GlobalBool(utils.DeveloperFlag.Name))
 		// Mining only makes sense if a full Berith node is running
 		if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
 			utils.Fatalf("Light clients do not support mining")

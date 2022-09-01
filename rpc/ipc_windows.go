@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
+//go:build windows
 // +build windows
 
 package rpc
@@ -36,6 +37,8 @@ func ipcListen(endpoint string) (net.Listener, error) {
 }
 
 // newIPCConnection will connect to a named pipe with the given endpoint as name.
+//
+// newIPCConnection은 지정된 엔드포인트를 이름으로 하는 파이프에 연결한다.
 func newIPCConnection(ctx context.Context, endpoint string) (net.Conn, error) {
 	timeout := defaultPipeDialTimeout
 	if deadline, ok := ctx.Deadline(); ok {
