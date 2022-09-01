@@ -157,6 +157,9 @@ func (cs *Candidates) selectBIP3BlockCreator(config *params.ChainConfig, number 
 		cs.selections = cs.selections[:len(cs.selections)-1] // 끝에서 두번째까지만
 		cs.total -= out.point
 	}
+	for k, r := range result {
+		fmt.Printf("Addr : %s , Rank : %v, Score : %v\n", k.Hex(), r.Rank, r.Score)
+	}
 	return result //추첨된 순서를 기준으로 랭크 부여후 맵 객체로 반환
 }
 

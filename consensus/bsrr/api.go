@@ -155,11 +155,8 @@ func (api *API) GetJoinRatio(address common.Address, number *rpc.BlockNumber) (f
 }
 
 // GetSignersAtHash retrieves the list of authorized signers at the specified block.
-func (api *API) GetSignersAtHash(hash common.Hash) ([]common.Address, error) {
-	header := api.chain.GetHeaderByHash(hash)
-	if header == nil {
-		return nil, errUnknownBlock
-	}
+func (api *API) GetSigners() ([]common.Address, error) {
+	header := api.chain.CurrentHeader()
 
 	parent := api.chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	if parent == nil {

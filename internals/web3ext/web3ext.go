@@ -144,6 +144,11 @@ const Bsrr_JS = `
 			name: 'getCandidates',
 			call: 'bsrr_getCandidates',
 			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'getSigners',
+			call: 'bsrr_getSigners',
+			params: 0
 		})
  	],
  	properties: []

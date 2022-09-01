@@ -757,6 +757,7 @@ Method to return the difficulty and rank when creating a block for a given addre
 [epoch+1, ~] -> 타겟블록의 스테이킹 리스트 반환
 */
 func (c *BSRR) calcDifficultyAndRank(signer common.Address, chain consensus.ChainReader, time uint64, target *types.Header) (*big.Int, int) {
+	fmt.Println("CalcDifficultyAndRank / Target : ", target.Number.Int64())
 	// extract diff and rank from genesis's extra data
 	if target.Number.Cmp(big.NewInt(0)) == 0 {
 		log.Info("default difficulty and rank", "diff", diffWithoutStaker, "rank", 1)
@@ -784,7 +785,7 @@ func (c *BSRR) calcDifficultyAndRank(signer common.Address, chain consensus.Chai
 		log.Warn("out of rank", "hash", target.Hash().Hex(), "rank", results[signer].Rank, "max", max)
 		return big.NewInt(0), -1
 	}
-
+	fmt.Printf("%s's Rank : %v\n", signer.Hash(), results[signer].Rank)
 	return results[signer].Score, results[signer].Rank
 }
 
@@ -967,6 +968,14 @@ func (c *BSRR) getStakers(chain consensus.ChainReader, number uint64, hash commo
 		blocks = append(blocks, block)
 		prevNum--
 		prevHash = block.ParentHash()
+	}
+	if list != nil {
+		fmt.Print("Stakers : ")
+		for _, stk := range list.AsList() {
+			fmt.Printf("\t%v\n", stk.Hash())
+		}
+	} else {
+		fmt.Println("Stakers : Nil")
 	}
 
 	if len(blocks) == 0 {
