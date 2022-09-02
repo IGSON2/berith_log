@@ -633,6 +633,7 @@ func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results cha
 	// Sweet, the protocol permits us to sign the block, wait for our time
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
 	_, rank := c.calcDifficultyAndRank(header.Coinbase, chain, 0, target)
+	fmt.Printf("BSRR.Seal() / rank : %v\n", rank)
 	if rank == -1 {
 		return errUnauthorizedSigner
 	}
@@ -644,6 +645,7 @@ func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results cha
 	}
 	delay += temp
 	fmt.Println("Seal() / delay : ", delay)
+
 	// Sign all the things!
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
 	if err != nil {
@@ -785,7 +787,7 @@ func (c *BSRR) calcDifficultyAndRank(signer common.Address, chain consensus.Chai
 		log.Warn("out of rank", "hash", target.Hash().Hex(), "rank", results[signer].Rank, "max", max)
 		return big.NewInt(0), -1
 	}
-	fmt.Printf("%s's Rank : %v\n", signer.Hash(), results[signer].Rank)
+	fmt.Printf("%v's Rank : %v\n", signer.Hex(), results[signer].Rank)
 	return results[signer].Score, results[signer].Rank
 }
 
@@ -854,6 +856,7 @@ func getReward(config *params.ChainConfig, header *types.Header) *big.Int {
 	if reward <= 0 {
 		return big.NewInt(0)
 	}
+	fmt.Println("getReward() / Reward : ", reward)
 	temp := reward * 1e+10
 	return new(big.Int).Mul(big.NewInt(int64(temp)), big.NewInt(1e+8))
 }
@@ -861,6 +864,7 @@ func getReward(config *params.ChainConfig, header *types.Header) *big.Int {
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward.
 func (c *BSRR) accumulateRewards(chain consensus.ChainReader, state *state.StateDB, header *types.Header) {
+	fmt.Println("BSRR.accumulateRewards() 호출")
 	config := chain.Config()
 	state.AddBehindBalance(header.Coinbase, header.Number, getReward(config, header))
 
@@ -878,6 +882,7 @@ func (c *BSRR) accumulateRewards(chain consensus.ChainReader, state *state.State
 	//all node block result
 	for _, addr := range signers {
 		behind, err := state.GetFirstBehindBalance(addr)
+		fmt.Printf("%v's Behind balance : %v\n", addr.Hex(), behind.Balance)
 		if err != nil {
 			continue
 		}
@@ -970,10 +975,7 @@ func (c *BSRR) getStakers(chain consensus.ChainReader, number uint64, hash commo
 		prevHash = block.ParentHash()
 	}
 	if list != nil {
-		fmt.Print("Stakers : ")
-		for _, stk := range list.AsList() {
-			fmt.Printf("\t%v\n", stk.Hash())
-		}
+		fmt.Println("Stakers : ", list.AsList())
 	} else {
 		fmt.Println("Stakers : Nil")
 	}

@@ -100,7 +100,10 @@ func (cs *Candidates) selectBlockCreator(config *params.ChainConfig, number uint
 The block constructor is selected and the result is returned in VoteResults.
 */
 func (cs *Candidates) selectBIP3BlockCreator(config *params.ChainConfig, number uint64) VoteResults {
-	fmt.Println("Candidates.selectBIP3BlockCreator () 호출 / Canditates : ", cs.selections)
+	fmt.Println("Candidates.selectBIP3BlockCreator () 호출 / Canditates : ")
+	for _, cdd := range cs.selections {
+		fmt.Printf("\t%v\n", cdd.address)
+	}
 	result := make(VoteResults)
 
 	currentElectScore := maxElectScore

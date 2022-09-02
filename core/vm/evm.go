@@ -185,6 +185,10 @@ func (evm *EVM) Interpreter() Interpreter {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
+//
+// Call은 주어진 입력을 매개 변수로 하여 addr과 연관된 계약을 실행한다.
+// 또한 필요한 값 전송을 처리하고 계정을 만드는 데 필요한 단계를 수행하며
+// 실행 오류 또는 값 전송 실패 시 상태를 반전시킨다.
 func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int, base types.JobWallet, target types.JobWallet) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil

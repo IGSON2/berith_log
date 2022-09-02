@@ -6,6 +6,7 @@ package in charge of electing operation
 package selection
 
 import (
+	"fmt"
 	"math/big"
 	"sort"
 
@@ -23,11 +24,13 @@ Entry function to elect Block Creator
 Returns the elected Block Creator map.
 */
 func SelectBlockCreator(config *params.ChainConfig, number uint64, hash common.Hash, stks staking.Stakers, state *state.StateDB) VoteResults {
+	fmt.Println("SelectBlockCreator () 호출")
 	result := make(VoteResults)
 
 	// Get and Sort staker list
 	list := sortableList(stks.AsList())
 	if len(list) == 0 {
+		fmt.Println("\tStakers is empty")
 		return result
 	}
 	sort.Sort(list)

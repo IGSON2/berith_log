@@ -511,7 +511,7 @@ func (w *worker) taskLoop() {
 		select {
 		case task := <-w.taskCh:
 			fmt.Println("worker.taskLoop() / worker.taskCh 개방 후 하위 로직 실행, Task : ")
-			fmt.Printf("\tblockNum : %v\n\treceipts : %v\n\tTx : %d", task.block.Number(), task.receipts, task.block.Transactions().Len())
+			fmt.Printf("\tblockNum : %v\n\treceipts : %v\n\tTx : %d\n", task.block.Number(), task.receipts, task.block.Transactions().Len())
 
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
@@ -717,6 +717,7 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	receipt, _, err := core.ApplyTransaction(w.config, w.chain, &coinbase, w.current.gasPool, w.current.state, w.current.header, tx, &w.current.header.GasUsed, *w.chain.GetVMConfig())
 	if err != nil { // 트랜잭션 실행이 실패할 경우 스냅샷을 되돌린다.
 		w.current.state.RevertToSnapshot(snap)
+		fmt.Println("commitTransaction / Failed apply tx , err : ", err)
 		return nil, err
 	}
 	w.current.txs = append(w.current.txs, tx)
@@ -724,13 +725,6 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 
 	fmt.Println("Transaction applied. Len (Recept) : ", len(w.current.receipts))
 
-	for i, t := range w.current.txs {
-		msg, err := t.AsMessage(w.current.signer)
-		if err != nil {
-			continue
-		}
-		fmt.Printf("\tTx %02d : %v\n", i+1, msg)
-	}
 	return receipt.Logs, nil
 }
 
@@ -805,10 +799,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		w.current.state.Prepare(tx.Hash(), common.Hash{}, w.current.tcount)
 
 		logs, err := w.commitTransaction(tx, coinbase)
-		fmt.Println("commitTransactions / receipt logs...")
-		for _, log := range logs {
-			fmt.Println("\t", log)
-		}
+
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account

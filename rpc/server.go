@@ -162,7 +162,6 @@ func (s *Server) serveRequest(ctx context.Context, codec ServerCodec, singleShot
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
 		reqs, batch, err := s.readRequest(codec)
-		fmt.Printf("Server.serveRequest () / SingleShot : %v\tbatch : %v\t\n", singleShot, batch)
 		if err != nil {
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
@@ -262,7 +261,6 @@ func (s *Server) createSubscription(ctx context.Context, c ServerCodec, req *ser
 
 // handle executes a request and returns the response from the callback. req : 코덱을 통해 읽어온 요청 정보
 func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverRequest) (interface{}, func()) {
-	fmt.Printf("Server.handle() 호출 codec : %v\treq callb method : %v\tcallb isSub : %v\n", codec, req.callb.method, req.callb.isSubscribe)
 	if req.err != nil {
 		return codec.CreateErrorResponse(&req.id, req.err), nil
 	}
@@ -317,9 +315,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 
 	// execute RPC method and return result
 	reply := req.callb.method.Func.Call(arguments)
-	if len(reply) > 0 {
-		fmt.Println("Server.handle() reply : ", reply[0].Interface())
-	}
+
 	if len(reply) == 0 {
 		return codec.CreateResponse(req.id, nil), nil
 	}

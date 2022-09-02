@@ -31,6 +31,7 @@ import (
 	"berith-chain/internals/jsre"
 	"berith-chain/internals/web3ext"
 
+	"github.com/BerithFoundation/berith-chain/log"
 	"github.com/BerithFoundation/berith-chain/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
@@ -157,6 +158,21 @@ func (c *Console) init(preload []string) error {
 	}
 	if _, err = c.jsre.Run(flatten); err != nil {
 		return fmt.Errorf("namespace flattening: %v", err)
+	}
+	// 빠른 테스트 초기 설정을 위한 임시 명령어
+	_, err = c.jsre.Run(`
+			var u1 = "";
+			var u2 = "";
+			if(berith.accounts[0] !== ""){u1 = berith.accounts[0];}
+			if(berith.accounts[1] !== ""){u2 = berith.accounts[1];}
+			var b = berith.getBalance;
+			var ua = personal.unlockAccount;
+			var t = berith.sendTransaction;
+			if(u1 !== ""){ua(u1,"777");}
+			if(u2 !== ""){ua(u2,"777");}
+			`)
+	if err != nil {
+		log.Error("임시 변수 초기화 불가능", "err", err)
 	}
 	// Initialize the global name register (disabled for now)
 	//c.jsre.Run(`var GlobalRegistrar = berith.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)

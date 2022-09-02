@@ -119,7 +119,7 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 		// 다음 미확인 블록을 검색하고 생성된 지 얼마 안됐다면 처리를 중단한다.
 		next := set.blocks.Value.(*unconfirmedBlock)
 		if next.index+uint64(set.depth) > height {
-			fmt.Printf("unconfirmedBlocks.Shift () / Break ! \n idx+depth : %v , height : %v", next.index+uint64(set.depth), height)
+			fmt.Printf("unconfirmedBlocks.Shift () / Break ! \n idx+depth : %v , height : %v\n", next.index+uint64(set.depth), height)
 			break
 		}
 		// Block seems to exceed depth allowance, check for canonical status

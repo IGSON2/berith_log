@@ -442,6 +442,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Update all accounts to the latest known pending nonce
 	for addr, list := range pool.pending {
 		txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
+		fmt.Println("\taddr : ", addr, "Tx len : ", len(txs))
 		pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
 	}
 	// Check the queue and move transactions over to the pending if possible
@@ -834,13 +835,17 @@ func (pool *TxPool) journalTx(from common.Address, tx *types.Transaction) {
 // 비교하여 추가 여부를 반환한다.
 func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.Transaction) bool {
 	fmt.Println("TxPool.promoteTx() 호출")
+	fmt.Printf("\tAddr : %v\n\tTx : %v\n", addr.Hex(), hash.Hex())
 	// Try to insert the transaction into the pending queue
 	if pool.pending[addr] == nil {
+		fmt.Println("\tpool.pending is nil")
 		pool.pending[addr] = newTxList(true)
 	}
 	list := pool.pending[addr]
+	fmt.Printf("\tList length : %v\n", list.Len())
 
-	inserted, old := list.Add(tx, pool.config.PriceBump)
+	inserted, old := list.Add(tx, pool.config.PriceBump) // 여기서 pool.pending 리스트에 추가됨
+	fmt.Printf("\tinserted : %v\n\tList length : %v\n\t", inserted, pool.pending[addr].Len())
 	if !inserted {
 		// An older transaction was better, discard this
 		pool.all.Remove(hash)
@@ -945,6 +950,10 @@ func (pool *TxPool) addTxsLocked(txs []*types.Transaction, local bool) []error {
 			dirty[from] = struct{}{}
 		}
 	}
+	fmt.Println("addTxLocked / dirty : ")
+	for d := range dirty {
+		fmt.Printf("\t%v\n", d.Hash().Hex())
+	}
 	// Only reprocess the internals state if something was actually added
 	if len(dirty) > 0 {
 		addrs := make([]common.Address, 0, len(dirty))
@@ -1033,7 +1042,7 @@ func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
 // 보류 중인 트랜잭션 집합으로 이동시킨다. 이 프로세스 중에 무효화된
 // 모든 트랜잭션(Low Nonce, Low Balance)은 삭제된다.
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
-	fmt.Println("core.go 990 / TxPool.promoteExecutables() 호출")
+	fmt.Println("TxPool.promoteExecutables() 호출")
 	// Track the promoted transactions to broadcast them at once
 	var promoted []*types.Transaction
 
@@ -1074,6 +1083,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
 			if pool.promoteTx(addr, hash, tx) {
+				fmt.Println("\tappended promoted tx")
 				log.Trace("Promoting queued transaction", "hash", hash)
 				promoted = append(promoted, tx)
 			}
@@ -1096,13 +1106,15 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
 		go pool.txFeed.Send(NewTxsEvent{promoted})
-		fmt.Println("TxPool.promoteExcutables / Send(NewTxsEvent)")
+		fmt.Println("\tSend(NewTxsEvent)")
 	}
 	// If the pending limit is overflown, start equalizing allowances
 	pending := uint64(0)
 	for _, list := range pool.pending {
 		pending += uint64(list.Len())
 	}
+	fmt.Println("\tpending : ", pending)
+	fmt.Println("\tGlobalSlots : ", pool.config.GlobalSlots)
 	if pending > pool.config.GlobalSlots {
 		pendingBeforeCap := pending
 		// Assemble a spam order to penalize large transactors first
