@@ -161,6 +161,7 @@ func (s *PrivateBerithAPI) sendTransaction(ctx context.Context, args SendTxArgs)
 	return submitTransaction(ctx, s.backend, signed)
 }
 
+// Temporary command
 func (s *PrivateBerithAPI) Burn(ctx context.Context, wallet WalletTxArgs) (common.Hash, error) {
 	state, _, err := s.backend.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if state == nil || err != nil {

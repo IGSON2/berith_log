@@ -86,13 +86,15 @@ type Message interface {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+//
+// 메시지의 가스 비용을 계산한다. 데이터가 클수록 높은 가스비 책정
 func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
-	if contractCreation && homestead {
-		gas = params.TxGasContractCreation
-	} else {
-		gas = params.TxGas
+	if contractCreation && homestead { // 컨트랙트 가스비
+		gas = params.TxGasContractCreation // 53,000
+	} else { // 기본 트랜잭션 가스비
+		gas = params.TxGas // 21,000
 	}
 	// Bump the required gas by the amount of transactional data
 	if len(data) > 0 {
@@ -104,11 +106,14 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 			}
 		}
 		// Make sure we don't exceed uint64 for all data combinations
+		// 모든 데이터 조합에서 uint64를 초과하지 않는지 검사
 		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
 			return 0, vm.ErrOutOfGas
 		}
+		// byte 배열 중 0이 아닌 값에 대한 추가 가스비 책정
 		gas += nz * params.TxDataNonZeroGas
 
+		// Zero byte의 가스비 추가
 		z := uint64(len(data)) - nz
 		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
 			return 0, vm.ErrOutOfGas

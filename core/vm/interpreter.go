@@ -240,6 +240,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		}
 		// consume the gas and return an error if not enough gas is available.
 		// cost is explicitly set so that the capture state defer method can get the proper cost
+		//
+		// 가스를 소비하고 충분한 가스가 없을 경우 오류를 반환한다.
 		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
 		if err != nil || !contract.UseGas(cost) {
 			return nil, ErrOutOfGas

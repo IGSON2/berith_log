@@ -841,7 +841,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 		fmt.Println("\tpool.pending is nil")
 		pool.pending[addr] = newTxList(true)
 	}
-	list := pool.pending[addr]
+	list := pool.pending[addr] // addr을 키 값으로 가지는 list를 지정하는 포인터로 실제 인스턴스에 값을 추가했기 때문
 	fmt.Printf("\tList length : %v\n", list.Len())
 
 	inserted, old := list.Add(tx, pool.config.PriceBump) // 여기서 pool.pending 리스트에 추가됨
@@ -1104,6 +1104,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		}
 	}
 	// Notify subsystem for new promoted transactions.
+	// 승격된 트랜잭션을 worker.txCh로 전송한다.
 	if len(promoted) > 0 {
 		go pool.txFeed.Send(NewTxsEvent{promoted})
 		fmt.Println("\tSend(NewTxsEvent)")

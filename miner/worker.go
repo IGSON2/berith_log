@@ -339,6 +339,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		recommit = time.Duration(int64(next))
 	}
 	// clearPending cleans the stale pending tasks.
+	// 7개 까지만 저장
 	clearPending := func(number uint64) {
 		w.pendingMu.Lock()
 		for h, t := range w.pendingTasks {
