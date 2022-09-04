@@ -250,6 +250,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	if !config.NoLocals && config.Journal != "" {
 		pool.journal = newTxJournal(config.Journal)
 
+		// 노드 재 실행 시 transactions.rlp 에 저장되어 있던 local tx 데이터를 pool에 추가한다.
 		if err := pool.journal.load(pool.AddLocals); err != nil {
 			log.Warn("Failed to load transaction journal", "err", err)
 		}
@@ -437,6 +438,8 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// any transactions that have been included in the block or
 	// have been invalidated because of another transaction (e.g.
 	// higher gas price)
+	//
+	// Pending TxPool을 검증한다. 이는 블록에 포함되었거나 무효화된 모든 TX를 제거한다.
 	pool.demoteUnexecutables()
 
 	// Update all accounts to the latest known pending nonce
@@ -489,7 +492,7 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 
 	pool.gasPrice = price
 	for _, tx := range pool.priced.Cap(price, pool.locals) {
-		pool.removeTx(tx.Hash(), false)
+		pool.removeTx(tx.Hash(), false) // threshold보다 낮은 tx 삭제
 	}
 	log.Info("Transaction pool price threshold updated", "price", price)
 }
@@ -842,7 +845,6 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 		pool.pending[addr] = newTxList(true)
 	}
 	list := pool.pending[addr] // addr을 키 값으로 가지는 list를 지정하는 포인터로 실제 인스턴스에 값을 추가했기 때문
-	fmt.Printf("\tList length : %v\n", list.Len())
 
 	inserted, old := list.Add(tx, pool.config.PriceBump) // 여기서 pool.pending 리스트에 추가됨
 	fmt.Printf("\tinserted : %v\n\tList length : %v\n\t", inserted, pool.pending[addr].Len())
@@ -1228,12 +1230,16 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 // executable/pending queue and any subsequent transactions that become unexecutable
 // are moved back into the future queue.
 func (pool *TxPool) demoteUnexecutables() {
+	fmt.Println("TxPool.demoteUnexecutables 호출")
 	// Iterate over all accounts and demote any non-executable transactions
 	for addr, list := range pool.pending {
 		nonce := pool.currentState.GetNonce(addr)
 
 		// Drop all transactions that are deemed too old (low nonce)
+		// 현재 addr state의 nonce보다 낮은 tx 삭제
+		// TransitionDb에서 트랜잭션이 처리될 때 addr의 nonce를 1 올려놨다.
 		for _, tx := range list.Forward(nonce) {
+			fmt.Println("TxPool.demoteUnexecutables / Drop all transactions that are deemed too old")
 			hash := tx.Hash()
 			log.Trace("Removed old pending transaction", "hash", hash)
 			pool.all.Remove(hash)
@@ -1242,6 +1248,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
 		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
+			fmt.Println("TxPool.demoteUnexecutables / drop : ", tx.To().Hex())
 			hash := tx.Hash()
 			log.Trace("Removed unpayable pending transaction", "hash", hash)
 			pool.all.Remove(hash)
@@ -1249,6 +1256,7 @@ func (pool *TxPool) demoteUnexecutables() {
 			pendingNofundsCounter.Inc(1)
 		}
 		for _, tx := range invalids {
+			fmt.Println("TxPool.demoteUnexecutables / invalid : ", tx.To().Hex())
 			hash := tx.Hash()
 			log.Trace("Demoting pending transaction", "hash", hash)
 			pool.enqueueTx(hash, tx)
@@ -1263,6 +1271,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		}
 		// Delete the entire queue entry if it became empty.
 		if list.Empty() {
+			fmt.Println("TxPool.demoteUnexecutables / List.Empty : ", true)
 			delete(pool.pending, addr)
 			delete(pool.beats, addr)
 		}
@@ -1344,6 +1353,8 @@ func (as *accountSet) flatten() []common.Address {
 // internals mechanisms. The sole purpose of the type is to permit out-of-bound
 // peeking into the pool in TxPool.Get without having to acquire the widely scoped
 // TxPool.mu mutex.
+//
+// txLookup은 TxPool에서 내부적으로 트랜잭션을 추적하는 데 사용되며 뮤텍스 경합 없이 조회를 허용한다.
 type txLookup struct {
 	all  map[common.Hash]*types.Transaction
 	lock sync.RWMutex

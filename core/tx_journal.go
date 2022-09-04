@@ -18,6 +18,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -60,6 +61,7 @@ func newTxJournal(path string) *txJournal {
 // load parses a transaction journal dump from disk, loading its contents into
 // the specified pool.
 func (journal *txJournal) load(add func([]*types.Transaction) []error) error {
+	fmt.Println("journal.load () 호출")
 	// Skip the parsing if the journal file doesn't exist at all
 	if _, err := os.Stat(journal.path); os.IsNotExist(err) {
 		return nil
@@ -132,6 +134,8 @@ func (journal *txJournal) insert(tx *types.Transaction) error {
 
 // rotate regenerates the transaction journal based on the current contents of
 // the transaction pool.
+//
+// rotate는 트랜잭션 풀의 현재 내용을 기준으로 트랜잭션 저널을 재생성한다.
 func (journal *txJournal) rotate(all map[common.Address]types.Transactions) error {
 	// Close the current journal (if any is open)
 	if journal.writer != nil {
