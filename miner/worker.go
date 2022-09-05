@@ -77,6 +77,8 @@ const (
 	staleThreshold = 7
 )
 
+var blockCh = make(chan struct{}, 1)
+
 // environment is the worker's current environment and holds all of the current state information.
 // environment는 작업자의 현재 환경이며 모든 현재 상태 정보를 보유하고 있다.
 type environment struct {
@@ -313,7 +315,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		} // 무조건 0으로 초기화?
 		interrupt = new(int32) // interrupt == 0
 		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp}
-		fmt.Println("worker.newWorkch 개방")
+		fmt.Println("worker.newWorkch 개방, interrupt : ", atomic.LoadInt32(interrupt))
 		timer.Reset(recommit)
 		atomic.StoreInt32(&w.newTxs, 0)
 	}
@@ -613,7 +615,7 @@ func (w *worker) resultLoop() {
 			// Insert the block into the set of pending ones to resultLoop for confirmations
 			// 확인을 위해 ResultLoop에 보류 중인 블록 집합에 블록을 삽입한다.
 			w.unconfirmed.Insert(block.NumberU64(), block.Hash())
-
+			blockCh <- struct{}{}
 		case <-w.exitCh:
 			return
 		}
@@ -624,6 +626,7 @@ func (w *worker) resultLoop() {
 // makeCurrent는 현재 사이클을 위한 새로운 환경을 만든다.
 // commitNewWork로 부터 parent가 될 현재 블록과 만들어지고 있는 새로운 헤더를 전달받는다.
 func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
+	fmt.Println("worker.makeCurrent 호출")
 	state, err := w.chain.StateAt(parent.Root())
 	if err != nil {
 		return err
@@ -800,7 +803,9 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		w.current.state.Prepare(tx.Hash(), common.Hash{}, w.current.tcount)
 
 		logs, err := w.commitTransaction(tx, coinbase)
-
+		if err != nil {
+			fmt.Println("commitTransaction Err : ", err)
+		}
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
@@ -818,6 +823,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 			txs.Pop()
 
 		case nil:
+			fmt.Println("commitTransaction Err is nil. Log : ", logs)
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
 			w.current.tcount++
@@ -953,7 +959,6 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	// Prefer to locally generated uncle
 	commitUncles(w.localUncles)
 	commitUncles(w.remoteUncles)
-
 	if !noempty {
 		// Create an empty block based on temporary copied state for sealing in advance without waiting block
 		// execution finished.
@@ -961,6 +966,12 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		fmt.Println("빈 블럭 commit")
 		w.commit(uncles, nil, false, tstart)
 
+	}
+
+	if w.isRunning() {
+		fmt.Println("Blocking next commit....")
+		<-blockCh
+		fmt.Println("commitNewWork / Release Blocking.")
 	}
 
 	// Fill the block with all available pending transactions.

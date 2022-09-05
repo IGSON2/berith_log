@@ -337,6 +337,7 @@ func (c *stateObject) SubBalance(amount *big.Int) {
 }
 
 func (s *stateObject) SetBalance(amount *big.Int) {
+	fmt.Printf("stateObject.SetBalance / Addr : %v, Amount : %v\n", s.address.Hex(), amount)
 	s.db.journal.append(balanceChange{
 		account: &s.address,
 		prev:    new(big.Int).Set(s.data.Balance),

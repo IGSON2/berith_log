@@ -127,6 +127,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	var root []byte
 	if config.IsByzantium(header.Number) {
 		statedb.Finalise(true)
+		fmt.Println("ApplyTransaction / Finalised stateDB. ", statedb.GetOrNewStateObject(msg.From()).AccountInfo())
 	} else {
 		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
 	}

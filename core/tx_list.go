@@ -30,6 +30,8 @@ import (
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
 // retrieving sorted transactions from the possibly gapped future queue.
+//
+// noceHeap은 갭이 생길 수 있는 미래 대기열에서 정렬된 트랜잭션을 검색하기 위한 것이다.
 type nonceHeap []uint64
 
 func (h nonceHeap) Len() int           { return len(h) }

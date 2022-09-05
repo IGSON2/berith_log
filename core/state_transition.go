@@ -238,6 +238,7 @@ func (st *StateTransition) TransitionDb(base types.JobWallet, target types.JobWa
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+		fmt.Printf("StateTransition.TransitionDb / Addr : %v,  Nonce : %v\n", msg.From(), st.state.GetNonce(sender.Address()))
 
 		// "Burn" custom temporary command test
 		if (base == types.Main || target == types.Main) && bytes.Equal(sender.Address().Bytes(), msg.To().Bytes()) {
@@ -249,6 +250,7 @@ func (st *StateTransition) TransitionDb(base types.JobWallet, target types.JobWa
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
+		fmt.Println("TransitionDb / VMerr : ", vmerr)
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.

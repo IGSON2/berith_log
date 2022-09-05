@@ -471,7 +471,6 @@ func (s *StateDB) GetPenaltyUpdated(addr common.Address) *big.Int {
 
 // AddBalance adds amount to the account associated with addr.
 func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
-	fmt.Printf("%s added Balance : %v\n", addr.Hex(), amount)
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.AddBalance(amount)
@@ -480,7 +479,6 @@ func (s *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 
 // SubBalance subtracts amount from the account associated with addr.
 func (s *StateDB) SubBalance(addr common.Address, amount *big.Int) {
-	fmt.Printf("%s decreased Balance : %v\n", addr.Hex(), amount)
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SubBalance(amount)

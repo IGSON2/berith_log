@@ -267,7 +267,7 @@ func (c *ChainIndexer) newHead(head uint64, reorg bool) {
 	// 재편성되면, 해당 시점까지 모든 섹션을 무효화한다.
 	if reorg {
 		// Revert the known section number to the reorg point
-		known := head / c.sectionSize
+		known := head / c.sectionSize // 현재 블록이 몇 번 째 섹션인가?
 		stored := known
 		if known < c.checkpointSections {
 			known = 0
