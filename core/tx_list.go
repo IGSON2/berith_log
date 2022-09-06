@@ -182,6 +182,9 @@ func (m *txSortedMap) Remove(nonce uint64) bool {
 // Note, all transactions with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
+//
+// Ready는 처리할 준비가 되면 제공된 start부터 시작하는 트랜잭션의 순차적 증가 목록을 검색한다.
+// 반환된 트랜잭션이 목록에서 제거된다.
 func (m *txSortedMap) Ready(start uint64) types.Transactions {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {

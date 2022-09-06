@@ -77,8 +77,6 @@ const (
 	staleThreshold = 7
 )
 
-var blockCh = make(chan struct{}, 1)
-
 // environment is the worker's current environment and holds all of the current state information.
 // environment는 작업자의 현재 환경이며 모든 현재 상태 정보를 보유하고 있다.
 type environment struct {
@@ -117,6 +115,7 @@ type newWorkReq struct {
 	interrupt *int32
 	noempty   bool
 	timestamp int64
+	thread    int
 }
 
 // intervalAdjust represents a resubmitting interval adjustment.
@@ -302,6 +301,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		interrupt   *int32
 		minRecommit = recommit // minimal resubmit interval specified by user.
 		timestamp   int64      // timestamp for each round of mining.
+		thread      int
 	)
 
 	timer := time.NewTimer(0)
@@ -311,10 +311,13 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 	commit := func(noempty bool, s int32) {
 		fmt.Println("worker.newWorkLoop 내부 commit() 함수 호출")
 		if interrupt != nil {
+			// 먼저 전달되어 commitNewWork에서 사용되고 있는 interrupt 주소에 s 값으로 치환
+			//
 			atomic.StoreInt32(interrupt, s)
-		} // 무조건 0으로 초기화?
-		interrupt = new(int32) // interrupt == 0
-		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp}
+		}
+		interrupt = new(int32) // 다음작업을 위한 초기화
+		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp, thread: thread}
+		thread++
 		fmt.Println("worker.newWorkch 개방, interrupt : ", atomic.LoadInt32(interrupt))
 		timer.Reset(recommit)
 		atomic.StoreInt32(&w.newTxs, 0)
@@ -359,7 +362,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
 
-		case head := <-w.chainHeadCh:
+		case head := <-w.chainHeadCh: // commit이 다시 실행되는 시점 : resultLoop이 끝난 후
 			fmt.Println("NewWorkLoop() / worker.chainHeadCh 개방 후 하위 로직 실행")
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
@@ -414,7 +417,7 @@ func (w *worker) mainLoop() {
 		select {
 		case req := <-w.newWorkCh:
 			fmt.Println("worker.mainLoop() / worker.newWorkCh 수신")
-			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
+			w.commitNewWork(req.interrupt, req.noempty, req.timestamp, req.thread)
 			workCnt++
 		case ev := <-w.chainSideCh:
 			fmt.Println("worker.mainLoop() / worker.chainSideCh 수신")
@@ -458,12 +461,12 @@ func (w *worker) mainLoop() {
 
 		case ev := <-w.txsCh:
 			fmt.Println("worker.txsCh 개방 후 하위 로직 실행 len(txs) : ", len(ev.Txs))
-			// 채굴중이 아니라면 미처리 상태로 트랜잭션을 적용시킨다.
 			// Apply transactions to the pending state if we're not mining.
 			//
 			// Note all transactions received may not be continuous with transactions
 			// already included in the current mining block. These transactions will
 			// be automatically eliminated.
+			// 채굴중이 아니라면 미처리 상태로 트랜잭션을 적용시킨다.
 			if !w.isRunning() && w.current != nil {
 				w.mu.RLock()
 				coinbase := w.coinbase
@@ -615,7 +618,6 @@ func (w *worker) resultLoop() {
 			// Insert the block into the set of pending ones to resultLoop for confirmations
 			// 확인을 위해 ResultLoop에 보류 중인 블록 집합에 블록을 삽입한다.
 			w.unconfirmed.Insert(block.NumberU64(), block.Hash())
-			blockCh <- struct{}{}
 		case <-w.exitCh:
 			return
 		}
@@ -864,8 +866,8 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 
 // commitNewWork generates several new sealing tasks based on the parent block.
 // commintNewWork는 부모 블록을 기반하여 여러개의 확정된 새 작업들을 생성한다.
-func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) {
-	fmt.Println("worker.commitNewWork() 호출")
+func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64, thread int) {
+	fmt.Printf("worker.commitNewWork() 호출 interrupt : %v, Thread : No.%d\n", atomic.LoadInt32(interrupt), thread)
 
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -968,12 +970,6 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 
 	}
 
-	if w.isRunning() {
-		fmt.Println("Blocking next commit....")
-		<-blockCh
-		fmt.Println("commitNewWork / Release Blocking.")
-	}
-
 	// Fill the block with all available pending transactions.
 	pending, err := w.e.TxPool().Pending()
 	if err != nil {
@@ -997,6 +993,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	fmt.Printf("LocalTxs : %d, ReoteTxs : %d\n", len(localTxs), len(remoteTxs))
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
+		fmt.Printf("worker.commitNewWork / interrupt : %v, Thread : No.%d\n", atomic.LoadInt32(interrupt), thread)
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
 			fmt.Println("commitNewWork / Return")
 			return // Tx가 커밋 됐다면 여기서 리턴
