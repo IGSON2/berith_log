@@ -445,7 +445,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// Update all accounts to the latest known pending nonce
 	for addr, list := range pool.pending {
 		txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
-		fmt.Println("\taddr : ", addr, "Tx len : ", len(txs))
+		fmt.Println("TxPool.reset / addr : ", addr.Hex(), "Tx len : ", len(txs))
 		pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
 	}
 	// Check the queue and move transactions over to the pending if possible
@@ -1239,7 +1239,7 @@ func (pool *TxPool) demoteUnexecutables() {
 		// 현재 addr state의 nonce보다 낮은 tx 삭제
 		// TransitionDb에서 트랜잭션이 처리될 때 addr의 nonce를 1 올려놨다.
 		for _, tx := range list.Forward(nonce) {
-			fmt.Println("TxPool.demoteUnexecutables / Drop all transactions that are deemed too old")
+			fmt.Println("TxPool.demoteUnexecutables / Drop all transactions that are deemed too old Nonce : ", nonce)
 			hash := tx.Hash()
 			log.Trace("Removed old pending transaction", "hash", hash)
 			pool.all.Remove(hash)

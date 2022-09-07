@@ -740,12 +740,9 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 			// Thus, we can safely ignore it here
 			continue
 		}
-		fmt.Println("StateDB.Finalise() / suicided : ", stateObject.suicided)
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
-			fmt.Println("StateDB.Finalise() : DeleteObject.")
 			s.deleteStateObject(stateObject)
 		} else {
-			fmt.Println("StateDB.Finalise() : UpdateObject.")
 			stateObject.updateRoot(s.db)
 			s.updateStateObject(stateObject)
 		}

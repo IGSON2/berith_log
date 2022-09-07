@@ -53,8 +53,8 @@ The state transitioning model does all the necessary work to work out a valid ne
 6) Derive new state root
 */
 //
-// state transition은 트랜잭션이 현재 월드 상태에 적용될 때 수행되는 변경 사항이다.
-// 상태 전이 모델은 유효한 새 상태 루트를 계산하는 데 필요한 모든 작업을 수행합니다.
+// state transition은 트랜잭션이 현재 world state에 적용될 때 수행되는 변경 사항이다.
+// state transition 모델은 유효한 새 state root를 계산하는 데 필요한 모든 작업을 수행합니다.
 type StateTransition struct {
 	gp         *GasPool
 	msg        Message
@@ -144,7 +144,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 // indicates a core error meaning that the message would always fail for that particular
 // state and would never be accepted within a block.
 //
-// ApplyMessage는 환경 내의 이전 상태에 대해 주어진 메시지를 적용하여 새 상태를 계산합니다.
+// ApplyMessage는 환경 내의 이전 state에 대해 주어진 메시지를 적용하여 새 state를 계산한다.
 func ApplyMessage(evm *vm.EVM, msg Message, gp *GasPool) ([]byte, uint64, bool, error) {
 	fmt.Println("ApplyMessage() 호출")
 	return NewStateTransition(evm, msg, gp).TransitionDb(msg.Base(), msg.Target())
@@ -238,7 +238,7 @@ func (st *StateTransition) TransitionDb(base types.JobWallet, target types.JobWa
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		fmt.Printf("StateTransition.TransitionDb / Addr : %v,  Nonce : %v\n", msg.From(), st.state.GetNonce(sender.Address()))
+		fmt.Printf("StateTransition.TransitionDb / Addr : %v,  Nonce : %v\n", msg.From().Hex(), st.state.GetNonce(sender.Address()))
 
 		// "Burn" custom temporary command test
 		if (base == types.Main || target == types.Main) && bytes.Equal(sender.Address().Bytes(), msg.To().Bytes()) {

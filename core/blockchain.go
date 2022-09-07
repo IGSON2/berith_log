@@ -509,7 +509,7 @@ func (bc *BlockChain) ExportN(w io.Writer, first uint64, last uint64) error {
 // header and the head fast sync block to this very same block if they are older
 // or if they are on a different side chain.
 //
-//insert는 새 헤드 블록을 현재 블록체인에 주입한다.
+// insert는 새 헤드 블록을 현재 블록체인에 주입한다.
 //
 // Note, this function assumes that the `mu` mutex is held!
 func (bc *BlockChain) insert(block *types.Block) {
@@ -531,7 +531,7 @@ func (bc *BlockChain) insert(block *types.Block) {
 
 		bc.currentFastBlock.Store(block)
 	}
-	fmt.Println("BlockChain.insert() / Block Inserted.", bc.hc.CurrentHeader().Hash())
+	fmt.Println("BlockChain.insert() / Block Inserted. BlockNumber : ", bc.hc.CurrentHeader().Number)
 }
 
 // Genesis retrieves the chain's genesis block.
@@ -1000,6 +1000,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	// Please refer to http://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf
 	// 외부 체인의 Td가 더 높으면 재편성
 	reorg := externTd.Cmp(localTd) > 0
+	fmt.Println("externTd > localTd ? ", reorg)
 	currentBlock = bc.CurrentBlock()
 	if !reorg && externTd.Cmp(localTd) == 0 {
 		// Split same-difficulty blocks by number, then preferentially select
@@ -1007,13 +1008,17 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 		if block.NumberU64() < currentBlock.NumberU64() {
 			//총 난이도는 같은데 새로 추가할 블럭의 체인이 더 짧으면 재편성
 			reorg = true
+			fmt.Printf("block.Number %d < currentBlock.Number %d\nreorg = true\n", block.NumberU64(), currentBlock.NumberU64())
 		} else if block.NumberU64() == currentBlock.NumberU64() {
 			var currentPreserve, blockPreserve bool
+			fmt.Printf("block.Number %d == currentBlock.Number %d\n", block.NumberU64(), currentBlock.NumberU64())
 			if bc.shouldPreserve != nil {
 				// 블록 채굴자와 체인의 코인베이스가 같은지 판단해 로컬블록인지 외부 블록인지 가려냄
 				currentPreserve, blockPreserve = bc.shouldPreserve(currentBlock), bc.shouldPreserve(block)
+				fmt.Printf(`currentPreserve : %v, blockPreserve : %v\n`, currentPreserve, blockPreserve)
 			}
 			reorg = !currentPreserve && (blockPreserve || mrand.Float64() < 0.5)
+			fmt.Printf("reorg = %v\n", reorg)
 		}
 	}
 	if reorg {

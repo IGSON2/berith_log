@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"reflect"
 	"sync"
 	"time"
 
@@ -491,6 +490,7 @@ func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error 
 
 	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
 	if header.Time.Int64() < time.Now().Unix() {
+		fmt.Println("header time init. BlockNumber : ", header.Number)
 		header.Time = big.NewInt(time.Now().Unix())
 	}
 	return nil
@@ -597,7 +597,7 @@ func (c *BSRR) Authorize(signer common.Address, signFn SignerFn) {
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
-	fmt.Println("BSRR.Seal() 호출, resultCh : ", reflect.TypeOf(results))
+	fmt.Println("BSRR.Seal() 호출")
 	header := block.Header()
 
 	// Sealing the genesis block is not supported
@@ -630,10 +630,18 @@ func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results cha
 		return errUnauthorizedSigner
 	}
 
+	// Prepare에서 header.Time에 미리 period만큼 시간을 더해 놓았다.
+	// 그러나 1번 블록은 제네시스 JSON 파일을 생성하고 Period 안에 채굴될 일이 거의 없기 때문에
+	// 제네시스 + Period 가 웬만하면 현재 UnixTime보다 작을 것이다.
+	// 때문에 1번 블록의 첫 commit 시 header.Time은 현재 시간으로 초기화되어
+	// 딜레이가 음수가 되는 것이다. 이런 이유로 처리해야 할 트랜잭션이 쌓이게되면
+	// 도중에 블록이 resultCh로 제출되어 새로운 commitNewWork을 호출하며
+	// interrupt에 1을 치환해 버리기 때문에 commitTransactions가 return 되는 것이다.
+	//
 	// Sweet, the protocol permits us to sign the block, wait for our time
 	delay := time.Unix(header.Time.Int64(), 0).Sub(time.Now()) // nolint: gosimple
 	_, rank := c.calcDifficultyAndRank(header.Coinbase, chain, 0, target)
-	fmt.Printf("BSRR.Seal() / rank : %v\n", rank)
+	fmt.Printf("BSRR.Seal() / rank : %v, delay : %v\n", rank, delay.Milliseconds())
 	if rank == -1 {
 		return errUnauthorizedSigner
 	}
@@ -644,7 +652,7 @@ func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results cha
 		return err
 	}
 	delay += temp
-	fmt.Println("Seal() / delay : ", delay)
+	fmt.Println("Seal() / delay + temp : ", delay)
 
 	// Sign all the things!
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
@@ -798,6 +806,7 @@ Always returns a value greater than or equal to 0
 */
 func (c *BSRR) getDelay(rank int) (time.Duration, error) {
 	if rank <= 1 {
+		fmt.Println("getDelay / return 0s")
 		return time.Duration(0), nil
 	}
 

@@ -115,7 +115,6 @@ type newWorkReq struct {
 	interrupt *int32
 	noempty   bool
 	timestamp int64
-	thread    int
 }
 
 // intervalAdjust represents a resubmitting interval adjustment.
@@ -298,7 +297,6 @@ func (w *worker) close() {
 func (w *worker) newWorkLoop(recommit time.Duration) {
 	fmt.Println("worker.newWorkLoop() 호출")
 	var (
-		interrupt   *int32
 		minRecommit = recommit // minimal resubmit interval specified by user.
 		timestamp   int64      // timestamp for each round of mining.
 		thread      int
@@ -307,6 +305,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 	timer := time.NewTimer(0)
 	<-timer.C // discard the initial tick
 
+	var interrupt *int32
 	// commit aborts in-flight transaction execution with given signal and resubmits a new one.
 	commit := func(noempty bool, s int32) {
 		fmt.Println("worker.newWorkLoop 내부 commit() 함수 호출")
@@ -316,7 +315,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			atomic.StoreInt32(interrupt, s)
 		}
 		interrupt = new(int32) // 다음작업을 위한 초기화
-		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp, thread: thread}
+		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp}
 		thread++
 		fmt.Println("worker.newWorkch 개방, interrupt : ", atomic.LoadInt32(interrupt))
 		timer.Reset(recommit)
@@ -360,9 +359,9 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			fmt.Println("NewWorkLoop() / worker.startCh 개방 후 하위 로직 실행")
 			clearPending(w.chain.CurrentBlock().NumberU64())
 			timestamp = time.Now().Unix()
-			commit(false, commitInterruptNewHead)
+			commit(false, commitInterruptNewHead) // const commitInterruptNewHead int32 = 1
 
-		case head := <-w.chainHeadCh: // commit이 다시 실행되는 시점 : resultLoop이 끝난 후
+		case head := <-w.chainHeadCh:
 			fmt.Println("NewWorkLoop() / worker.chainHeadCh 개방 후 하위 로직 실행")
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
@@ -417,7 +416,7 @@ func (w *worker) mainLoop() {
 		select {
 		case req := <-w.newWorkCh:
 			fmt.Println("worker.mainLoop() / worker.newWorkCh 수신")
-			w.commitNewWork(req.interrupt, req.noempty, req.timestamp, req.thread)
+			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
 			workCnt++
 		case ev := <-w.chainSideCh:
 			fmt.Println("worker.mainLoop() / worker.chainSideCh 수신")
@@ -556,7 +555,7 @@ func (w *worker) resultLoop() {
 		select {
 		case block := <-w.resultCh:
 			fmt.Println("worker.resultLoop() / worker.resultCh 개방 후 하위 로직 실행")
-			fmt.Printf("BlockHeader : %v\nUncles : %v\nTransactions : %v\n", block.Header().Number, block.Uncles(), block.Transactions())
+			fmt.Printf("\tBlockNum : %v\n\tUncles : %v\t\nTransactions : %v\n", block.Header().Number, len(block.Uncles()), block.Transactions().Len())
 			// Short circuit when receiving empty result.
 			if block == nil {
 				continue
@@ -720,6 +719,8 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	fmt.Println("commitTransaction() 호출")
 	snap := w.current.state.Snapshot()
 
+	// current의 state는 이전 블록 root 기반이기 때문에 블록이 추가되지 못한 채
+	// commitNewWork 내부에서 makeCurrent가 다시 실행되면 자동으로 revert 되는 셈이다.
 	receipt, _, err := core.ApplyTransaction(w.config, w.chain, &coinbase, w.current.gasPool, w.current.state, w.current.header, tx, &w.current.header.GasUsed, *w.chain.GetVMConfig())
 	if err != nil { // 트랜잭션 실행이 실패할 경우 스냅샷을 되돌린다.
 		w.current.state.RevertToSnapshot(snap)
@@ -775,6 +776,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 				}
 				fmt.Println("commitTransactions / resubmintAdjustCh 데이터 발신")
 			}
+			fmt.Println("commitTransactions / return true due to commitIntereruptNewHead")
 			return atomic.LoadInt32(interrupt) == commitInterruptNewHead
 		}
 		// If we don't have enough gas for any further transactions then we're done
@@ -866,8 +868,8 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 
 // commitNewWork generates several new sealing tasks based on the parent block.
 // commintNewWork는 부모 블록을 기반하여 여러개의 확정된 새 작업들을 생성한다.
-func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64, thread int) {
-	fmt.Printf("worker.commitNewWork() 호출 interrupt : %v, Thread : No.%d\n", atomic.LoadInt32(interrupt), thread)
+func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) {
+	fmt.Printf("worker.commitNewWork() 호출 interrupt : %v\n", atomic.LoadInt32(interrupt))
 
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -890,7 +892,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64, 
 	// 새 블록의 헤더 초깃값 세팅
 	header := &types.Header{
 		ParentHash: parent.Hash(),
-		Number:     num.Add(num, common.Big1),
+		Number:     num.Add(num, common.Big1), // 여기서 다음 블록이 될 헤더의 넘버를 1 증가시킨다.
 		GasLimit:   core.CalcGasLimit(parent, w.gasFloor, w.gasCeil),
 		Extra:      w.extra,
 		Time:       big.NewInt(timestamp),
@@ -939,7 +941,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64, 
 	// 현재 블럭의 엉클블럭을 모은다.
 	uncles := make([]*types.Header, 0, 2)
 	commitUncles := func(blocks map[common.Hash]*types.Block) {
-		fmt.Println("commitNewWork() 내부 commitUncles() 호출")
+		fmt.Println("commitNewWork() 내부 commitUncles() 호출, uncles : ", len(blocks))
 		// Clean up stale uncle blocks first
 		for hash, uncle := range blocks {
 			if uncle.NumberU64()+staleThreshold <= header.Number.Uint64() {
@@ -965,7 +967,8 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64, 
 		// Create an empty block based on temporary copied state for sealing in advance without waiting block
 		// execution finished.
 		// 블럭 확정 처리를 기다리지 않고 미리 포장을 하기 위해 임시로 복제된 state를 기반으로 빈 블럭을 생성한다.
-		fmt.Println("빈 블럭 commit")
+		// 이전 work에서 추가되지 못했던 블럭 commit
+		fmt.Println("빈 블록 commit")
 		w.commit(uncles, nil, false, tstart)
 
 	}
@@ -993,16 +996,16 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64, 
 	fmt.Printf("LocalTxs : %d, ReoteTxs : %d\n", len(localTxs), len(remoteTxs))
 	if len(localTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
-		fmt.Printf("worker.commitNewWork / interrupt : %v, Thread : No.%d\n", atomic.LoadInt32(interrupt), thread)
+		fmt.Printf("worker.commitNewWork / interrupt : %v\n", atomic.LoadInt32(interrupt))
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
-			fmt.Println("commitNewWork / Return")
+			fmt.Println("commitNewWork / LocalTxs_Return")
 			return // Tx가 커밋 됐다면 여기서 리턴
 		}
 	}
 	if len(remoteTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
-			fmt.Println("commitNewWork / Return")
+			fmt.Println("commitNewWork / RemoteTxs_Return")
 			return // Tx가 커밋 됐다면 여기서 리턴
 		}
 	}
