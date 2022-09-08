@@ -659,6 +659,7 @@ func (w *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 	// 오류를 반환하는 트랜잭션을 추적하여 오류를 제거할 수 있도록 한다.
 	env.tcount = 0
 	w.current = env
+	fmt.Println("makeCurrent / Txs : ", len(w.current.txs))
 	return nil
 }
 
@@ -730,7 +731,7 @@ func (w *worker) commitTransaction(tx *types.Transaction, coinbase common.Addres
 	w.current.txs = append(w.current.txs, tx)
 	w.current.receipts = append(w.current.receipts, receipt)
 
-	fmt.Println("Transaction applied. Len (Recept) : ", len(w.current.receipts))
+	fmt.Println("Transaction applied. Len (Txs) : ", len(w.current.txs))
 
 	return receipt.Logs, nil
 }
@@ -999,14 +1000,14 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		fmt.Printf("worker.commitNewWork / interrupt : %v\n", atomic.LoadInt32(interrupt))
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
 			fmt.Println("commitNewWork / LocalTxs_Return")
-			return // Tx가 커밋 됐다면 여기서 리턴
+			return
 		}
 	}
 	if len(remoteTxs) > 0 {
 		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
 		if w.commitTransactions(txs, w.coinbase, interrupt) {
 			fmt.Println("commitNewWork / RemoteTxs_Return")
-			return // Tx가 커밋 됐다면 여기서 리턴
+			return
 		}
 	}
 

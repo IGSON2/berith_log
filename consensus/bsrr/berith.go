@@ -488,7 +488,9 @@ func (c *BSRR) Prepare(chain consensus.ChainReader, header *types.Header) error 
 	// Mix digest is reserved for now, set to empty
 	header.MixDigest = common.Hash{}
 
+	// 블록 생성시 먼저 현재시간에 Period만큼 더해서 Time이 초기화됨.
 	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(c.config.Period))
+
 	if header.Time.Int64() < time.Now().Unix() {
 		fmt.Println("header time init. BlockNumber : ", header.Number)
 		header.Time = big.NewInt(time.Now().Unix())
@@ -520,7 +522,7 @@ func (c *BSRR) Finalize(chain consensus.ChainReader, header *types.Header, state
 			log.Warn("unknown ancestor", "parent", "nil")
 		}
 
-		if chain.Config().IsBIP1Block(header.Number) {
+		if chain.Config().IsBIP1Block(header.Number) { // Berith는 ETH와 달리POS니까
 			stks, err = c.supportBIP1(chain, parent, stks)
 			if err != nil {
 				return nil, errBIP1
