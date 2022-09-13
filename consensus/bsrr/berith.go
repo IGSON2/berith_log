@@ -598,6 +598,8 @@ func (c *BSRR) Authorize(signer common.Address, signFn SignerFn) {
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
+//
+// 
 func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	fmt.Println("BSRR.Seal() 호출")
 	header := block.Header()

@@ -5378,6 +5378,14 @@ along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
             inputFormatter: [formatters.inputTransactionFormatter]
         });
 
+            // [vote] 임시 메서드 추가
+        var vote = new Method({
+            name: 'vote',
+            call: 'berith_vote',
+            params: 1,
+            inputFormatter: [formatters.inputTransactionFormatter]
+        });
+
         var signTransaction = new Method({
             name: 'signTransaction',
             call: 'berith_signTransaction',
@@ -5455,6 +5463,7 @@ along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
             sendRawTransaction,
             signTransaction,
             sendTransaction,
+            vote,
             sign,
             compileSolidity,
             compileLLL,

@@ -202,6 +202,7 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 			method: in.Method, params: in.Payload}}, false, nil
 	}
 
+	// berith_stake 와 같은 요청이 들어왔을때 "berith"와 "stake"로 나누기 위함
 	elems := strings.Split(in.Method, serviceMethodSeparator)
 	if len(elems) != 2 {
 		return nil, false, &methodNotFoundError{in.Method, ""}

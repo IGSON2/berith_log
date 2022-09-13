@@ -161,7 +161,7 @@ func (s *PrivateBerithAPI) sendTransaction(ctx context.Context, args SendTxArgs)
 	return submitTransaction(ctx, s.backend, signed)
 }
 
-// Temporary command
+// 임시 CLI
 func (s *PrivateBerithAPI) Burn(ctx context.Context, wallet WalletTxArgs) (common.Hash, error) {
 	state, _, err := s.backend.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if state == nil || err != nil {
@@ -183,6 +183,12 @@ func (s *PrivateBerithAPI) Burn(ctx context.Context, wallet WalletTxArgs) (commo
 	}
 	return s.sendTransaction(ctx, *sendTx)
 
+}
+
+// 임시 CLI2
+func (s *PrivateBerithAPI) Vote(ctx context.Context, wallet WalletTxArgs) (common.Hash, error) {
+	fmt.Printf("%s Votes %d ", wallet.From.Hex(), wallet.Value.ToInt())
+	return *new(common.Hash), nil
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
