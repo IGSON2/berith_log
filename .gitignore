@@ -56,4 +56,4 @@ cmd/berith/password.txt
 **/yarn-error.log
 cmd/berith/bdata*
 
-genesis.json
+cmd/berith/genesis.json
