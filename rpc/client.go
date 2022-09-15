@@ -263,7 +263,7 @@ func (c *Client) Call(result interface{}, method string, args ...interface{}) er
 // 반환되기 전에 컨텍스트가 취소되면, 이 함수는 즉시 반환된다.
 func (c *Client) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
 	msg, err := c.newMessage(method, args...)
-	fmt.Printf("Callcontext () 호출 / method : %s, args : %v,msg : %v\n", method, args, msg)
+	// fmt.Printf("Callcontext () 호출 / method : %s, args : %v,msg : %v\n", method, args, msg)
 	if err != nil {
 		return err
 	}
@@ -435,7 +435,7 @@ func (c *Client) newMessage(method string, paramsIn ...interface{}) (*jsonrpcMes
 //
 // send는 dispatch 루프에 op를 등록하고 커넥션으로 메시지를 전송한다.
 func (c *Client) send(ctx context.Context, op *requestOp, msg interface{}) error {
-	fmt.Println("Client.send() 호출, msg : ", msg)
+	// fmt.Println("Client.send() 호출, msg : ", msg)
 	select {
 	case c.requestOp <- op:
 		log.Trace("", "msg", log.Lazy{Fn: func() string {
@@ -468,7 +468,7 @@ func (c *Client) write(ctx context.Context, msg interface{}) error {
 	}
 	c.writeConn.SetWriteDeadline(deadline)
 	err := json.NewEncoder(c.writeConn).Encode(msg)
-	fmt.Println("Client.write() / msg : ", msg)
+	// fmt.Println("Client.write() / msg : ", msg)
 	c.writeConn.SetWriteDeadline(time.Time{})
 	if err != nil {
 		c.writeConn = nil
@@ -499,7 +499,6 @@ func (c *Client) reconnect(ctx context.Context) error {
 // dispatch는 클라이언트의 메인 루프이다.
 // Call 및 BatchCall 대기 중인 호출에 읽기 메시지를 보내고 등록된 구독에 구독 알림을 보낸다.
 func (c *Client) dispatch(conn net.Conn) {
-	fmt.Println("Client.dispatch() 호출")
 	// Spawn the initial read loop.
 	go c.read(conn)
 
@@ -535,19 +534,16 @@ func (c *Client) dispatch(conn net.Conn) {
 			for _, msg := range batch {
 				switch {
 				case msg.isNotification():
-					fmt.Println("Client.dispatch / batch == Notification")
 					log.Trace("", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: notification ", msg)
 					}})
 					c.handleNotification(msg)
 				case msg.isResponse():
-					fmt.Println("Client.dispatch / batch == Response")
 					log.Trace("", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: response ", msg)
 					}})
 					c.handleResponse(msg)
 				default:
-					fmt.Println("Client.dispatch / batch == None")
 					log.Debug("", "msg", log.Lazy{Fn: func() string {
 						return fmt.Sprint("<-readResp: dropping weird message", msg)
 					}})
@@ -689,7 +685,6 @@ func (c *Client) read(conn net.Conn) error {
 			return err
 		}
 		c.readResp <- resp
-		fmt.Println("Client.read() 호출")
 	}
 }
 

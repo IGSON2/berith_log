@@ -171,8 +171,60 @@ func (c *Console) init(preload []string) error {
 			if(u1 !== ""){ua(u1,"777");}
 			if(u2 !== ""){ua(u2,"777");}
 			`)
+
 	if err != nil {
 		log.Error("임시 변수 초기화 불가능", "err", err)
+	}
+
+	// 컨트랙트 실험
+	_, err = c.jsre.Run(`var abi = [
+		{
+			"inputs": [
+				{
+					"internalType": "address payable",
+					"name": "_to",
+					"type": "address"
+				}
+			],
+			"name": "sendViaCall",
+			"outputs": [],
+			"stateMutability": "payable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address payable",
+					"name": "_to",
+					"type": "address"
+				}
+			],
+			"name": "sendViaSend",
+			"outputs": [],
+			"stateMutability": "payable",
+			"type": "function"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address payable",
+					"name": "_to",
+					"type": "address"
+				}
+			],
+			"name": "sendViaTransfer",
+			"outputs": [],
+			"stateMutability": "payable",
+			"type": "function"
+		}
+	];
+	var object = '0x608060405234801561001057600080fd5b50610390806100206000396000f3fe6080604052600436106100345760003560e01c8063636e082b1461003957806374be480614610055578063830c29ae14610071575b600080fd5b610053600480360381019061004e919061026a565b61008d565b005b61006f600480360381019061006a919061026a565b6100d7565b005b61008b6004803603810190610086919061026a565b610154565b005b8073ffffffffffffffffffffffffffffffffffffffff166108fc349081150290604051600060405180830381858888f193505050501580156100d3573d6000803e3d6000fd5b5050565b60008173ffffffffffffffffffffffffffffffffffffffff166108fc349081150290604051600060405180830381858888f19350505050905080610150576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610147906102f4565b60405180910390fd5b5050565b6000808273ffffffffffffffffffffffffffffffffffffffff163460405161017b90610345565b60006040518083038185875af1925050503d80600081146101b8576040519150601f19603f3d011682016040523d82523d6000602084013e6101bd565b606091505b509150915081610202576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016101f9906102f4565b60405180910390fd5b505050565b600080fd5b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b60006102378261020c565b9050919050565b6102478161022c565b811461025257600080fd5b50565b6000813590506102648161023e565b92915050565b6000602082840312156102805761027f610207565b5b600061028e84828501610255565b91505092915050565b600082825260208201905092915050565b7f4661696c656420746f2073656e64204574686572000000000000000000000000600082015250565b60006102de601483610297565b91506102e9826102a8565b602082019050919050565b6000602082019050818103600083015261030d816102d1565b9050919050565b600081905092915050565b50565b600061032f600083610314565b915061033a8261031f565b600082019050919050565b600061035082610322565b915081905091905056fea2646970667358221220421f5b57f28125ec5c8f1e4df7bf717dc03b2c6973e53990b809eeeb915bcb6b64736f6c63430008110033';
+
+	var contractAbi = berith.contract(abi);
+	var ct = contractAbi.new({from: u1, data: object, gas: 1000000});
+						`)
+	if err != nil {
+		log.Error("컨트랙트 초기화 오류", "err", err)
 	}
 	// Initialize the global name register (disabled for now)
 	//c.jsre.Run(`var GlobalRegistrar = berith.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
@@ -338,6 +390,7 @@ func (c *Console) Interactive() {
 			// Read the next user input
 			line, err := c.prompter.PromptInput(<-scheduler)
 			if err != nil {
+				log.Error("Console Error ! ", "Err", err)
 				// In case of an error, either clear the prompt or fail
 				if err == liner.ErrPromptAborted { // ctrl-C
 					prompt, indents, input = c.prompt, 0, ""
