@@ -14,7 +14,7 @@
       "bip4Block": 1,
       "bsrr": {
         "period": 5,
-        "epoch": 20,
+        "epoch": 360,
         "rewards": 1000000000000000000,
         "stakeminimum": 1000000000000000000,
         "limitStakeBalance": 50000000000000000000000000,

@@ -23,6 +23,7 @@ import (
 
 	"github.com/BerithFoundation/berith-chain/common"
 	"github.com/BerithFoundation/berith-chain/common/math"
+	"github.com/BerithFoundation/berith-chain/log"
 	"github.com/BerithFoundation/berith-chain/params"
 )
 
@@ -141,6 +142,7 @@ func (in *EVMInterpreter) enforceRestrictions(op OpCode, operation operation, st
 // considered a revert-and-consume-all-gas operation except for
 // errExecutionReverted which means revert-and-keep-gas-left.
 func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
+	log.Warn("EVMInterpreter.Run 호출")
 	if in.intPool == nil {
 		in.intPool = poolOfIntPools.get()
 		defer func() {
@@ -166,6 +168,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 
 	// Don't bother with the execution if there's no code.
 	if len(contract.Code) == 0 {
+		log.Warn("EVMInterpreter.Run / length of contract code is 0 ")
 		return nil, nil
 	}
 
@@ -212,15 +215,22 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
+		log.Warn("Compiling..", "op", op)
+		if op == RETURN {
+			log.Warn("RETURN OP", "CodeByte", contract.Code)
+		}
 		operation := in.cfg.JumpTable[op]
 		if !operation.valid {
+			log.Error("EVMInterpreter.Run / Invalid op error ", "error", err, "CodeByte", contract.Code)
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
 		}
 		if err := operation.validateStack(stack); err != nil {
+			log.Error("EVMInterpreter.Run / Validate Stack error", "error", err, "CodeByte", contract.Code)
 			return nil, err
 		}
 		// If the operation is valid, enforce and write restrictions
 		if err := in.enforceRestrictions(op, operation, stack); err != nil {
+			log.Error("EVMInterpreter.Run / Enforce Restriction error", "error", err)
 			return nil, err
 		}
 
@@ -266,10 +276,12 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// set the last return to the result of the operation.
 		if operation.returns {
 			in.returnData = res
+			log.Warn("Interpreter returns", res)
 		}
 
 		switch {
 		case err != nil:
+			log.Warn("EVMInterpreter.Run / Error occured after excute code", err)
 			return nil, err
 		case operation.reverts:
 			return res, errExecutionReverted

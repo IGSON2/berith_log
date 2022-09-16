@@ -101,7 +101,7 @@ const (
 	NUMBER
 	DIFFICULTY
 	GASLIMIT
-)
+) // 71에 매핑되는 값이 없다.
 
 // 0x50 range - 'storage' and execution.
 const (

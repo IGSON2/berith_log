@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/BerithFoundation/berith-chain/core/types"
+	"github.com/BerithFoundation/berith-chain/log"
 
 	"github.com/BerithFoundation/berith-chain/common"
 	"github.com/BerithFoundation/berith-chain/crypto"
@@ -66,6 +67,8 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 				evm.interpreter = interpreter
 			}
 			return interpreter.Run(contract, input, readOnly)
+		} else {
+			log.Error("Cannot run contract code", "Contract", contract.CodeAddr.Hex())
 		}
 	}
 	return nil, ErrNoCompatibleInterpreter
@@ -393,6 +396,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		return nil, common.Address{}, gas, ErrDepth
 	}
 	if !evm.CanTransfer(evm.StateDB, caller.Address(), value, types.Main) {
+		log.Error("Evm.create / Cannot transfer")
 		return nil, common.Address{}, gas, ErrInsufficientBalance
 	}
 	nonce := evm.StateDB.GetNonce(caller.Address())
@@ -401,6 +405,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	// Ensure there's no existing contract already at the designated address
 	contractHash := evm.StateDB.GetCodeHash(address)
 	if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+		log.Error("Evm.create / already exit contract.", "Nonce", evm.StateDB.GetNonce(address), "contract Hash", contractHash)
 		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
 	// Create a new account on the state
