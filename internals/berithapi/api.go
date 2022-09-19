@@ -1218,19 +1218,6 @@ type BerithSendTxArgs struct {
 	Target string         `json:"target"`
 }
 
-type SendTxArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Value    *hexutil.Big    `json:"value"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
-	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
-	// newer name and should be preferred by clients.
-	Data  *hexutil.Bytes `json:"data"`
-	Input *hexutil.Bytes `json:"input"`
-}
-
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
 func (args *BerithSendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {

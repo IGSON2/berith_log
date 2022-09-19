@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/BerithFoundation/berith-chain/common"
@@ -67,4 +69,20 @@ func TestBlockEncoding(t *testing.T) {
 	if !bytes.Equal(ourBlockEnc, blockEnc) {
 		t.Errorf("encoded block mismatch:\ngot:  %x\nwant: %x", ourBlockEnc, blockEnc)
 	}
+}
+
+func TestRlpHash(t *testing.T) {
+	var x []byte
+	var str = "[91 34 48 120 53 50 53 55 97 98 97 54 53 49 53 50 52 54 97 50 50 100 56 101 97 101 50 54 101 48 55 48 98 51 97 51 98 97 53 52 48 48 54 99 100 97 54 97 55 52 98 48 48 49 52 56 98 56 51 100 51 101 50 52 102 55 99 51 34 93]"
+	str = strings.TrimLeft(str, "[")
+	str = strings.TrimRight(str, "]")
+	nums := strings.Split(str, " ")
+	for _, n := range nums {
+		newN, err := strconv.Atoi(n)
+		if err != nil {
+			t.Error(err)
+		}
+		x = append(x, byte(newN))
+	}
+	fmt.Println(rlpHash(x))
 }

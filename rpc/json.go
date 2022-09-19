@@ -174,6 +174,7 @@ func parseRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) {
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
 		return nil, false, &invalidMessageError{err.Error()}
 	}
+	log.Warn("parseRequest", "in", in)
 	if err := checkReqId(in.Id); err != nil {
 		return nil, false, &invalidMessageError{err.Error()}
 	}
@@ -273,9 +274,13 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) 
 // ParseRequestArguments tries to parse the given params (json.RawMessage) with the given
 // types. It returns the parsed values or an error when the parsing failed.
 func (c *jsonCodec) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, Error) {
+	for _, myType := range argTypes {
+		log.Warn("Parse argument", "Type", myType)
+	}
 	if args, ok := params.(json.RawMessage); !ok {
 		return nil, &invalidParamsError{"Invalid params supplied"}
 	} else {
+		log.Warn("Parse argument", "Params", params, "args", args)
 		return parsePositionalArguments(args, argTypes)
 	}
 }

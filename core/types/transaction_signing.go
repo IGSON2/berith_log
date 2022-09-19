@@ -136,9 +136,9 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
+	V := new(big.Int).Sub(tx.data.getV(), s.chainIdMul)
 	V.Sub(V, big8)
-	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V, true)
+	return recoverPlain(s.Hash(tx), tx.data.getR(), tx.data.getS(), V, true)
 }
 
 // SignatureValues returns signature values. This signature
@@ -159,14 +159,14 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
-		tx.data.AccountNonce,
-		tx.data.Price,
-		tx.data.GasLimit,
-		tx.data.Recipient,
-		tx.data.Amount,
-		tx.data.Payload,
-		tx.data.Base,
-		tx.data.Target,
+		tx.data.getAccountNonce(),
+		tx.data.getPrice(),
+		tx.data.getGasLimit(),
+		tx.data.getRecipient(),
+		tx.data.getAmount(),
+		tx.data.getPayload(),
+		tx.data.getBase(),
+		tx.data.getTarget(),
 		s.chainId, uint(0), uint(0),
 	})
 }
@@ -187,7 +187,7 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, true)
+	return recoverPlain(hs.Hash(tx), tx.data.getR(), tx.data.getS(), tx.data.getV(), true)
 }
 
 type FrontierSigner struct{}
@@ -213,17 +213,17 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
-		tx.data.AccountNonce,
-		tx.data.Price,
-		tx.data.GasLimit,
-		tx.data.Recipient,
-		tx.data.Amount,
-		tx.data.Payload,
+		tx.data.getAccountNonce(),
+		tx.data.getPrice(),
+		tx.data.getGasLimit(),
+		tx.data.getRecipient(),
+		tx.data.getAmount(),
+		tx.data.getPayload(),
 	})
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
-	return recoverPlain(fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
+	return recoverPlain(fs.Hash(tx), tx.data.getR(), tx.data.getS(), tx.data.getV(), false)
 }
 
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
