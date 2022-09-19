@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
+	"fmt"
 	"math/big"
+	"sync/atomic"
 	"testing"
 
 	"github.com/BerithFoundation/berith-chain/common"
@@ -227,4 +229,80 @@ func TestTransactionJSON(t *testing.T) {
 			t.Errorf("invalid chain id, want %d, got %d", tx.ChainId(), parsedTx.ChainId())
 		}
 	}
+}
+
+type originTxData struct {
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
+	GasLimit     uint64          `json:"gas"      gencodec:"required"`
+	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
+	Amount       *big.Int        `json:"value"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`
+
+	// Signature values
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+type OriginTransaction struct {
+	data originTxData
+	// caches
+	hash atomic.Value
+	size atomic.Value
+	from atomic.Value
+}
+
+func (tx *OriginTransaction) Hash() common.Hash {
+	if hash := tx.hash.Load(); hash != nil {
+		return hash.(common.Hash)
+	}
+	v := rlpHash(tx)
+	tx.hash.Store(v)
+	return v
+}
+
+var (
+	ogNonce  = 1
+	ogTo     = common.BytesToAddress([]byte{11, 22, 33})
+	amount   = big.NewInt(12341248)
+	gaslimit = 1000000
+	gasPrice = big.NewInt(23000)
+)
+
+func newOriginTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *OriginTransaction {
+	if len(data) > 0 {
+		data = common.CopyBytes(data)
+	}
+	d := originTxData{
+		AccountNonce: nonce,
+		Recipient:    to,
+		Payload:      data,
+		Amount:       new(big.Int),
+
+		GasLimit: gasLimit,
+		Price:    new(big.Int),
+		V:        new(big.Int),
+		R:        new(big.Int),
+		S:        new(big.Int),
+	}
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+
+	return &OriginTransaction{data: d}
+}
+
+func TestPrintHexTx(t *testing.T) {
+	Otx := newOriginTransaction(uint64(ogNonce), &ogTo, amount, uint64(gaslimit), gasPrice, nil)
+	Btx := NewTransaction(uint64(ogNonce), ogTo, amount, uint64(gaslimit), gasPrice, nil, 0, 0)
+
+	fmt.Println("OTX", Otx.Hash())
+	fmt.Println("BTX", Btx.Hash())
 }

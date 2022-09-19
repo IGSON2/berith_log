@@ -131,7 +131,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		msg:      msg,
 		gasPrice: msg.GasPrice(),
 		value:    msg.Value(),
-		data:     msg.Data(),
+		data:     msg.Data(), // Contract Code
 		state:    evm.StateDB,
 	}
 }

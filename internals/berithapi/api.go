@@ -350,7 +350,7 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 // signTransaction sets defaults and signs the given transaction
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool
-func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArgs, passwd string) (*types.Transaction, error) {
+func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *BerithSendTxArgs, passwd string) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 	wallet, err := s.am.Find(account)
@@ -374,7 +374,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArg
 // SendTransaction will create a transaction from the given arguments and
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails.
-func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args BerithSendTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -393,7 +393,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails. The transaction is returned in RLP-form, not broadcast
 // to other nodes
-func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
+func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args BerithSendTxArgs, passwd string) (*SignTransactionResult, error) {
 	// No need to obtain the noncelock mutex, since we won't be sending this
 	// tx into the transaction pool, but right back to the user
 	if args.Gas == nil {
@@ -484,7 +484,7 @@ func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Byt
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
 // and will be removed in the future. It primary goal is to give clients time to update.
-func (s *PrivateAccountAPI) SignAndSendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+func (s *PrivateAccountAPI) SignAndSendTransaction(ctx context.Context, args BerithSendTxArgs, passwd string) (common.Hash, error) {
 	return s.SendTransaction(ctx, args, passwd)
 }
 
@@ -1202,8 +1202,8 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 	return wallet.SignTx(account, tx, chainID)
 }
 
-// SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
-type SendTxArgs struct {
+// BerithSendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
+type BerithSendTxArgs struct {
 	From     common.Address  `json:"from"`
 	To       *common.Address `json:"to"`
 	Gas      *hexutil.Uint64 `json:"gas"`
@@ -1218,8 +1218,21 @@ type SendTxArgs struct {
 	Target string         `json:"target"`
 }
 
+type SendTxArgs struct {
+	From     common.Address  `json:"from"`
+	To       *common.Address `json:"to"`
+	Gas      *hexutil.Uint64 `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	Value    *hexutil.Big    `json:"value"`
+	Nonce    *hexutil.Uint64 `json:"nonce"`
+	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
+	// newer name and should be preferred by clients.
+	Data  *hexutil.Bytes `json:"data"`
+	Input *hexutil.Bytes `json:"input"`
+}
+
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
-func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
+func (args *BerithSendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	if args.Gas == nil {
 		args.Gas = new(hexutil.Uint64)
 		*(*uint64)(args.Gas) = 90000
@@ -1269,7 +1282,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	return nil
 }
 
-func (args *SendTxArgs) toTransaction() *types.Transaction {
+func (args *BerithSendTxArgs) toTransaction() *types.Transaction {
 	var input []byte
 	if args.Data != nil {
 		input = *args.Data
@@ -1303,12 +1316,13 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	} else {
 		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
+	log.Warn("Hashed", "Tx", tx.Hash())
 	return tx.Hash(), nil
 }
 
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
-func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args BerithSendTxArgs) (common.Hash, error) {
 	fmt.Println("PublicTransactionPoolAPI.SendTransaction() 호출")
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
@@ -1324,12 +1338,13 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 		s.nonceLock.LockAddr(args.From)
 		defer s.nonceLock.UnlockAddr(args.From)
 	}
-
+	log.Warn("Requsted argument", "Base", args.Base, "Target", args.Target, "Data", args.Data, "Input", args.Input, "From", args.From, "To", args.To, "Gas", args.Gas, "Value", args.Value)
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
 	// Assemble the transaction and sign with the wallet
+	log.Warn("Set argument", "Base", args.Base, "Target", args.Target, "Data", args.Data, "Input", args.Input, "From", args.From, "To", args.To, "Gas", args.Gas, "Value", args.Value)
 	tx := args.toTransaction()
 
 	var chainID *big.Int
@@ -1386,7 +1401,7 @@ type SignTransactionResult struct {
 // SignTransaction will sign the given transaction with the from account.
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
-func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
+func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args BerithSendTxArgs) (*SignTransactionResult, error) {
 	if args.Gas == nil {
 		return nil, fmt.Errorf("gas not specified")
 	}
@@ -1439,7 +1454,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]*RPCTransaction, err
 
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
-func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
+func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs BerithSendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
 	if sendArgs.Nonce == nil {
 		return common.Hash{}, fmt.Errorf("missing transaction nonce in transaction spec")
 	}
