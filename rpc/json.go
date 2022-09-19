@@ -140,6 +140,7 @@ func (c *jsonCodec) ReadRequestHeaders() ([]rpcRequest, bool, Error) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
+	// incomingMsg가 originETH와 어떻게 다른 포멧으로 전달되는걸까?
 	var incomingMsg json.RawMessage
 	if err := c.decode(&incomingMsg); err != nil {
 		return nil, false, &invalidRequestError{err.Error()}

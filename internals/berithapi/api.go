@@ -1300,6 +1300,7 @@ func (args *BerithSendTxArgs) toTransaction() *types.Transaction {
 }
 
 // submitTransaction is a helper function that submits tx to txPool and logs a message.
+// Staking일 수도 있으니 인자를 Interface로 받고, 경우에따라 변환해주어야함
 func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
 	fmt.Println("berithapi / api.go / submitTransaction () 호출")
 	if err := b.SendTx(ctx, tx); err != nil {
@@ -1316,8 +1317,12 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 	} else {
 		log.Info("Submitted transaction", "fullhash", tx.Hash().Hex(), "recipient", tx.To())
 	}
-	log.Warn("Hashed", "Tx", tx.Hash())
+
 	return tx.Hash(), nil
+
+	// [Berith] To make contract usable
+	//originTx := types.NewOriginTransaction(tx)
+	//return originTx.Hash(), nil
 }
 
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
