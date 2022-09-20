@@ -125,6 +125,7 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
+	log.Warn("NewStateTransition", "msg.Data", msg.Data())
 	return &StateTransition{
 		gp:       gp,
 		evm:      evm,

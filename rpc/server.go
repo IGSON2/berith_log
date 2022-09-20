@@ -445,7 +445,10 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 		}
 
 		requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
-		log.Warn("Request", "Args", requests[i].args, "FuncName", requests[i].callb.method.Name, "temp Method Name", requests[i].callb.method)
+		for _, arg := range requests[i].args {
+			log.Warn("readRequest", "Args", arg)
+		}
+		log.Warn("readRequest", "FuncName", requests[i].callb.method.Name, "temp Method Name", requests[i].callb.method)
 	}
 
 	return requests, batch, nil
