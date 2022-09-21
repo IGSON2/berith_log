@@ -54,6 +54,6 @@ cmd/berith/password.txt
 ./wallet/resources/app/.vscode
 
 **/yarn-error.log
-/cmd/berith/bdata*
+cmd/berith/bdata*
 
-/cmd/berith/genesis.json
+cmd/berith/genesis.json
