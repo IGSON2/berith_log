@@ -107,11 +107,11 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 		}
 		// Make sure we don't exceed uint64 for all data combinations
 		// 모든 데이터 조합에서 uint64를 초과하지 않는지 검사
-		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+		if (math.MaxUint64-gas)/params.TxDataNonZeroGasFrontier < nz {
 			return 0, vm.ErrOutOfGas
 		}
 		// byte 배열 중 0이 아닌 값에 대한 추가 가스비 책정
-		gas += nz * params.TxDataNonZeroGas
+		gas += nz * params.TxDataNonZeroGasFrontier
 
 		// Zero byte의 가스비 추가
 		z := uint64(len(data)) - nz
@@ -207,7 +207,7 @@ func (st *StateTransition) TransitionDb(base types.JobWallet, target types.JobWa
 	}
 	msg := st.msg
 	sender := vm.AccountRef(msg.From())
-	homestead := st.evm.ChainConfig().IsHomestead(st.evm.BlockNumber)
+	homestead := st.evm.ChainConfig().IsHomestead(st.evm.Context.BlockNumber)
 	contractCreation := msg.To() == nil
 
 	if err := types.ValidateJobWallet(base, target); err != nil {
@@ -261,7 +261,7 @@ func (st *StateTransition) TransitionDb(base types.JobWallet, target types.JobWa
 	}
 	st.refundGas()
 	// [BERITH] Gas Fee
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
 	return ret, st.gasUsed(), vmerr != nil, err
 }
