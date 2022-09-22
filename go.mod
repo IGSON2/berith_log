@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/Azure/azure-storage-blob-go v0.0.0-20180712005634-eaae161d9d5e
 	github.com/BerithFoundation/berith-chain v1.1.0
+	github.com/VictoriaMetrics/fastcache v1.12.0 // indirect
 	github.com/alexmullins/zip v0.0.0-20180717182244-4affb64b04d0
 	github.com/allegro/bigcache v1.2.1
 	github.com/aristanetworks/goarista v0.0.0-20200429182514-19402535e24e
@@ -24,7 +25,7 @@ require (
 	//github.com/gizak/termui/v3 v3.1.0 // indirect
 	github.com/go-stack/stack v1.8.0
 	github.com/golang/protobuf v1.4.1
-	github.com/golang/snappy v0.0.1
+	github.com/golang/snappy v0.0.4
 	github.com/gookit/color v1.2.5
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/holiman/uint256 v1.2.1
@@ -48,7 +49,7 @@ require (
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
 	golang.org/x/net v0.0.0-20210610132358-84b48f89b13b
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20211117180635-dee7805ff2e1
+	golang.org/x/sys v0.0.0-20220405052023-b1e9470b6e64
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6
