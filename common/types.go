@@ -17,9 +17,11 @@
 package common
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -27,7 +29,7 @@ import (
 	"strings"
 
 	"github.com/BerithFoundation/berith-chain/common/hexutil"
-	"github.com/BerithFoundation/berith-chain/crypto/sha3"
+	"golang.org/x/crypto/sha3"
 )
 
 // Lengths of hashes and addresses in bytes.
@@ -55,31 +57,12 @@ type Hash [HashLength]byte
 [BERITH]
 Function to check if the address prefix is entered correctly
 */
-func CheckBerithPrefix(str string, start int) bool {
-	if len(str) > start+2 {
-		lower := strings.ToLower(AddressPrefix)
-		upper := strings.ToUpper(AddressPrefix)
-		if (str[start] == lower[0] || str[start] == upper[0]) && (str[start+1] == lower[1] || str[start+1] == upper[1]) {
-			return true
-		}
-	}
-	return false
-}
-
 // HasAddressPrefix verifies whether a string starts with AddressPrefix or not.
 func HasAddressPrefix(s string) bool {
 	if len(s) < AddressPrefixLength {
 		return false
 	}
 	return strings.EqualFold(AddressPrefix, s[:AddressPrefixLength])
-}
-
-// RemoveAddressPrefix returns a address without prefix given address string.
-func RemoveAddressPrefix(s string) string {
-	if HasAddressPrefix(s) {
-		return s[AddressPrefixLength:]
-	}
-	return s
 }
 
 // BytesToHash sets b to hash.
@@ -98,18 +81,6 @@ func BigToHash(b *big.Int) Hash { return BytesToHash(b.Bytes()) }
 // If b is larger than len(h), b will be cropped from the left.
 func HexToHash(s string) Hash { return BytesToHash(FromHex(s)) }
 
-// StringToBig converts decimal string into Big Int
-func StringToBig(value string) *big.Int {
-	var result, _ = new(big.Int).SetString(value, 10)
-	return result
-}
-
-// BigIntToBigFloat converts big.Int into big.Float
-func BigIntToBigFloat(value *big.Int) *big.Float {
-	var result = new(big.Float).SetInt(value)
-	return result
-}
-
 // Bytes gets the byte representation of the underlying hash.
 func (h Hash) Bytes() []byte { return h[:] }
 
@@ -122,7 +93,7 @@ func (h Hash) Hex() string { return hexutil.Encode(h[:]) }
 // TerminalString implements log.TerminalStringer, formatting a string for console
 // output during logging.
 func (h Hash) TerminalString() string {
-	return fmt.Sprintf("%x…%x", h[:3], h[29:])
+	return fmt.Sprintf("%x..%x", h[:3], h[29:])
 }
 
 // String implements the stringer interface and is used also by the logger when
@@ -131,10 +102,35 @@ func (h Hash) String() string {
 	return h.Hex()
 }
 
-// Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
-// without going through the stringer interface used for logging.
+// Format implements fmt.Formatter.
+// Hash supports the %v, %s, %v, %x, %X and %d format verbs.
 func (h Hash) Format(s fmt.State, c rune) {
-	fmt.Fprintf(s, "%"+string(c), h[:])
+	hexb := make([]byte, 2+len(h)*2)
+	// [Berith]
+	copy(hexb, "Bx")
+	hex.Encode(hexb[2:], h[:])
+
+	switch c {
+	case 'x', 'X':
+		if !s.Flag('#') {
+			hexb = hexb[2:]
+		}
+		if c == 'X' {
+			hexb = bytes.ToUpper(hexb)
+		}
+		fallthrough
+	case 'v', 's':
+		s.Write(hexb)
+	case 'q':
+		q := []byte{'"'}
+		s.Write(q)
+		s.Write(hexb)
+		s.Write(q)
+	case 'd':
+		fmt.Fprint(s, ([len(h)]byte)(h))
+	default:
+		fmt.Fprintf(s, "%%!%c(hash=%x)", c, h)
+	}
 }
 
 // UnmarshalText parses a hash in hex syntax.
@@ -189,6 +185,21 @@ func (h Hash) Value() (driver.Value, error) {
 	return h[:], nil
 }
 
+// ImplementsGraphQLType returns true if Hash implements the specified GraphQL type.
+func (Hash) ImplementsGraphQLType(name string) bool { return name == "Bytes32" }
+
+// UnmarshalGraphQL unmarshals the provided GraphQL query data.
+func (h *Hash) UnmarshalGraphQL(input interface{}) error {
+	var err error
+	switch input := input.(type) {
+	case string:
+		err = h.UnmarshalText([]byte(input))
+	default:
+		err = fmt.Errorf("unexpected type %T for Hash", input)
+	}
+	return err
+}
+
 // UnprefixedHash allows marshaling a Hash without 0x prefix.
 type UnprefixedHash Hash
 
@@ -224,7 +235,7 @@ func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
 // Berith address or not.
 func IsHexAddress(s string) bool {
-	if hasHexPrefix(s) {
+	if hasBxPrefix(s) {
 		s = s[2:]
 	}
 	return len(s) == 2*AddressLength && isHex(s)
@@ -233,32 +244,12 @@ func IsHexAddress(s string) bool {
 // Bytes gets the string representation of the underlying address.
 func (a Address) Bytes() []byte { return a[:] }
 
-// Big converts an address to a big integer.
-func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
-
 // Hash converts an address to a hash by left-padding it with zeros.
 func (a Address) Hash() Hash { return BytesToHash(a[:]) }
 
 // Hex returns an EIP55-compliant hex string representation of the address.
 func (a Address) Hex() string {
-	unchecksummed := hex.EncodeToString(a[:])
-	sha := sha3.NewKeccak256()
-	sha.Write([]byte(unchecksummed))
-	hash := sha.Sum(nil)
-
-	result := []byte(unchecksummed)
-	for i := 0; i < len(result); i++ {
-		hashByte := hash[i/2]
-		if i%2 == 0 {
-			hashByte = hashByte >> 4
-		} else {
-			hashByte &= 0xf
-		}
-		if result[i] > '9' && hashByte > 7 {
-			result[i] -= 32
-		}
-	}
-	return AddressPrefix + string(result)
+	return string(a.checksumHex())
 }
 
 // String implements fmt.Stringer.
@@ -266,14 +257,64 @@ func (a Address) String() string {
 	return a.Hex()
 }
 
-// Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
-// without going through the stringer interface used for logging.
+func (a *Address) checksumHex() []byte {
+	buf := a.hex()
+
+	// compute checksum
+	sha := sha3.NewLegacyKeccak256()
+	sha.Write(buf[2:])
+	hash := sha.Sum(nil)
+	for i := 2; i < len(buf); i++ {
+		hashByte := hash[(i-2)/2]
+		if i%2 == 0 {
+			hashByte = hashByte >> 4
+		} else {
+			hashByte &= 0xf
+		}
+		if buf[i] > '9' && hashByte > 7 {
+			buf[i] -= 32
+		}
+	}
+	return buf[:]
+}
+
+func (a Address) hex() []byte {
+	var buf [len(a)*2 + 2]byte
+	copy(buf[:2], "Bx")
+	hex.Encode(buf[2:], a[:])
+	return buf[:]
+}
+
+// Format implements fmt.Formatter.
+// Address supports the %v, %s, %v, %x, %X and %d format verbs.
 func (a Address) Format(s fmt.State, c rune) {
-	fmt.Fprintf(s, "%"+string(c), a[:])
+	switch c {
+	case 'v', 's':
+		s.Write(a.checksumHex())
+	case 'q':
+		q := []byte{'"'}
+		s.Write(q)
+		s.Write(a.checksumHex())
+		s.Write(q)
+	case 'x', 'X':
+		// %x disables the checksum.
+		hex := a.hex()
+		if !s.Flag('#') {
+			hex = hex[2:]
+		}
+		if c == 'X' {
+			hex = bytes.ToUpper(hex)
+		}
+		s.Write(hex)
+	case 'd':
+		fmt.Fprint(s, ([len(a)]byte)(a))
+	default:
+		fmt.Fprintf(s, "%%!%c(address=%x)", c, a)
+	}
 }
 
 // SetBytes sets the address to the value of b.
-// If b is larger than len(a) it will panic.
+// If b is larger than len(a), b will be cropped from the left.
 func (a *Address) SetBytes(b []byte) {
 	if len(b) > len(a) {
 		b = b[len(b)-AddressLength:]
@@ -283,35 +324,16 @@ func (a *Address) SetBytes(b []byte) {
 
 // MarshalText returns the hex representation of a.
 func (a Address) MarshalText() ([]byte, error) {
-	b := a[:]
-	result := make([]byte, len(b)*2+2)
-	copy(result, AddressPrefix)
-	hex.Encode(result[2:], b)
-	return result, nil
+	return hexutil.Bytes(a[:]).MarshalText()
 }
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	if len(input) > 1 {
-		inputStr := string(input)
-		if !HasAddressPrefix(inputStr) {
-			return fmt.Errorf("berith address without \"%s\" prefix", AddressPrefix)
-		}
-		input = []byte("0x" + inputStr[2:])
-	}
 	return hexutil.UnmarshalFixedText("Address", input, a[:])
 }
 
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
-	if len(input) > 2 {
-		inputStr := string(input)
-		// TODO : must have addr prefix ?
-		if !HasAddressPrefix(inputStr[1:]) {
-			return fmt.Errorf("berith address without \"%s\" prefix", AddressPrefix)
-		}
-		input = []byte(inputStr[:1] + "0x" + inputStr[3:])
-	}
 	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
 }
 
@@ -331,6 +353,21 @@ func (a *Address) Scan(src interface{}) error {
 // Value implements valuer for database/sql.
 func (a Address) Value() (driver.Value, error) {
 	return a[:], nil
+}
+
+// ImplementsGraphQLType returns true if Hash implements the specified GraphQL type.
+func (a Address) ImplementsGraphQLType(name string) bool { return name == "Address" }
+
+// UnmarshalGraphQL unmarshals the provided GraphQL query data.
+func (a *Address) UnmarshalGraphQL(input interface{}) error {
+	var err error
+	switch input := input.(type) {
+	case string:
+		err = a.UnmarshalText([]byte(input))
+	default:
+		err = fmt.Errorf("unexpected type %T for Address", input)
+	}
+	return err
 }
 
 // UnprefixedAddress allows marshaling an Address without 0x prefix.
@@ -360,11 +397,8 @@ func NewMixedcaseAddress(addr Address) MixedcaseAddress {
 
 // NewMixedcaseAddressFromString is mainly meant for unit-testing
 func NewMixedcaseAddressFromString(hexaddr string) (*MixedcaseAddress, error) {
-	if HasAddressPrefix(hexaddr) {
-		hexaddr = "0x" + RemoveAddressPrefix(hexaddr)
-	}
 	if !IsHexAddress(hexaddr) {
-		return nil, fmt.Errorf("Invalid address")
+		return nil, errors.New("invalid address")
 	}
 	a := FromHex(hexaddr)
 	return &MixedcaseAddress{addr: BytesToAddress(a), original: hexaddr}, nil
@@ -372,8 +406,7 @@ func NewMixedcaseAddressFromString(hexaddr string) (*MixedcaseAddress, error) {
 
 // UnmarshalJSON parses MixedcaseAddress
 func (ma *MixedcaseAddress) UnmarshalJSON(input []byte) error {
-	// [BERITH] Unmarshal directly because berith address has no hex prefix
-	if err := ma.addr.UnmarshalJSON(input); err != nil {
+	if err := hexutil.UnmarshalFixedJSON(addressT, input, ma.addr[:]); err != nil {
 		return err
 	}
 	return json.Unmarshal(input, &ma.original)

@@ -1,4 +1,4 @@
-// Copyright 2014 The go-ethereum Authors
+// Copyright 2018 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -14,28 +14,19 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package types
+package memorydb
 
 import (
-	"bytes"
+	"testing"
 
-	"github.com/BerithFoundation/berith-chain/common"
-	"github.com/BerithFoundation/berith-chain/rlp"
-	"github.com/BerithFoundation/berith-chain/trie"
+	"github.com/BerithFoundation/berith-chain/berithdb"
+	"github.com/BerithFoundation/berith-chain/berithdb/dbtest"
 )
 
-type DerivableList interface {
-	Len() int
-	GetRlp(i int) []byte
-}
-
-func DeriveSha(list DerivableList) common.Hash {
-	keybuf := new(bytes.Buffer)
-	trie := new(trie.Trie)
-	for i := 0; i < list.Len(); i++ {
-		keybuf.Reset()
-		rlp.Encode(keybuf, uint(i))
-		trie.Update(keybuf.Bytes(), list.GetRlp(i))
-	}
-	return trie.Hash()
+func TestMemoryDB(t *testing.T) {
+	t.Run("DatabaseSuite", func(t *testing.T) {
+		dbtest.TestDatabaseSuite(t, func() berithdb.KeyValueStore {
+			return New()
+		})
+	})
 }

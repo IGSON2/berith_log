@@ -25,9 +25,12 @@ import (
 	"time"
 
 	"github.com/BerithFoundation/berith-chain/common"
+	"github.com/BerithFoundation/berith-chain/core/rawdb"
+	"github.com/BerithFoundation/berith-chain/core/state/snapshot"
 	"github.com/BerithFoundation/berith-chain/core/types"
 	"github.com/BerithFoundation/berith-chain/crypto"
 	"github.com/BerithFoundation/berith-chain/log"
+	"github.com/BerithFoundation/berith-chain/metrics"
 	"github.com/BerithFoundation/berith-chain/rlp"
 	"github.com/BerithFoundation/berith-chain/trie"
 )
@@ -695,7 +698,7 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 				data.CodeHash = emptyCodeHash
 			}
 			if data.Root == (common.Hash{}) {
-				data.Root = emptyRoot
+				data.Root = emptyState
 			}
 		}
 	}
@@ -1106,7 +1109,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 		if err := rlp.DecodeBytes(leaf, &account); err != nil {
 			return nil
 		}
-		if account.Root != emptyRoot {
+		if account.Root != emptyState {
 			s.db.TrieDB().Reference(account.Root, parent)
 		}
 		return nil
