@@ -57,7 +57,7 @@ type Transaction struct {
 // NewTx creates a new transaction.
 func NewTx(inner TxData) *Transaction {
 	tx := new(Transaction)
-	tx.setDecoded(inner.copy(), 0)
+	tx.setDecoded(inner.copy(inner.target(), inner.base()), 0)
 	return tx
 }
 
@@ -65,8 +65,8 @@ func NewTx(inner TxData) *Transaction {
 //
 // This is implemented by LegacyTx and AccessListTx.
 type TxData interface {
-	txType() byte // returns the type ID
-	copy() TxData // creates a deep copy and initializes all fields
+	txType() byte                       // returns the type ID
+	copy(target, base JobWallet) TxData // creates a deep copy and initializes all fields
 
 	chainID() *big.Int
 	accessList() AccessList
@@ -337,7 +337,7 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	if err != nil {
 		return nil, err
 	}
-	cpy := tx.inner.copy()
+	cpy := tx.inner.copy(tx.inner.target(), tx.inner.base())
 	cpy.setSignatureValues(signer.ChainID(), v, r, s)
 	return &Transaction{inner: cpy, time: tx.time}, nil
 }

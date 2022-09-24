@@ -65,7 +65,7 @@ func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPric
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *LegacyTx) copy() TxData {
+func (tx *LegacyTx) copy(target, base JobWallet) TxData {
 	cpy := &LegacyTx{
 		Nonce: tx.Nonce,
 		To:    tx.To, // TODO: copy pointed-to address
@@ -77,6 +77,8 @@ func (tx *LegacyTx) copy() TxData {
 		V:        new(big.Int),
 		R:        new(big.Int),
 		S:        new(big.Int),
+		Base:     base,
+		Target:   target,
 	}
 	if tx.Value != nil {
 		cpy.Value.Set(tx.Value)

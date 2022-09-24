@@ -53,10 +53,12 @@ type AccessListTx struct {
 	Data       []byte          // contract invocation input data
 	AccessList AccessList      // EIP-2930 access list
 	V, R, S    *big.Int        // signature values
+	Target     JobWallet       `json:"target"  gencodec:"required"` //[Berith] 작업타겟 ex) 스테이킹시 : Stake
+	Base       JobWallet       `json:"base"  gencodec:"required"`   //[Berith] 작업 주체  ex) 스테이킹시 : Main
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *AccessListTx) copy() TxData {
+func (tx *AccessListTx) copy(target, base JobWallet) TxData {
 	cpy := &AccessListTx{
 		Nonce: tx.Nonce,
 		To:    tx.To, // TODO: copy pointed-to address
@@ -70,6 +72,8 @@ func (tx *AccessListTx) copy() TxData {
 		V:          new(big.Int),
 		R:          new(big.Int),
 		S:          new(big.Int),
+		Base:       base,
+		Target:     target,
 	}
 	copy(cpy.AccessList, tx.AccessList)
 	if tx.Value != nil {
