@@ -299,3 +299,35 @@ func (ch accessListAddSlotChange) revert(s *StateDB) {
 func (ch accessListAddSlotChange) dirtied() *common.Address {
 	return nil
 }
+
+func (ch stakingChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setStaking(ch.prevBalance, ch.prevBlock)
+}
+
+func (ch stakingChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch pointChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setPoint(ch.prev)
+}
+
+func (ch pointChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch behindChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setBehind(ch.prev)
+}
+
+func (ch behindChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch penaltyChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setPenalty(ch.prevPenalty, ch.prevBlock)
+}
+
+func (ch penaltyChange) dirtied() *common.Address {
+	return ch.account
+}
