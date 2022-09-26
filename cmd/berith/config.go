@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"math/big"
 	"os"
 	"reflect"
@@ -32,7 +31,6 @@ import (
 	"github.com/BerithFoundation/berith-chain/cmd/utils"
 	"github.com/BerithFoundation/berith-chain/node"
 	"github.com/BerithFoundation/berith-chain/params"
-	whisper "github.com/BerithFoundation/berith-chain/whisper/whisperv6"
 	"github.com/naoina/toml"
 )
 
@@ -76,7 +74,6 @@ type berithStatsConfig struct {
 
 type berConfig struct {
 	Ber         berith.Config
-	Shh         whisper.Config
 	Node        node.Config
 	BerithStats berithStatsConfig
 }
@@ -110,7 +107,6 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, berConfig) {
 	// Load defaults.
 	cfg := berConfig{
 		Ber:  berith.DefaultConfig,
-		Shh:  whisper.DefaultConfig,
 		Node: defaultNodeConfig(),
 	}
 
@@ -132,19 +128,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, berConfig) {
 		cfg.BerithStats.URL = ctx.GlobalString(utils.BerithStatsURLFlag.Name)
 	}
 
-	utils.SetShhConfig(ctx, stack, &cfg.Shh)
-
 	return stack, cfg
-}
-
-// enableWhisper returns true in case one of the whisper flags is set.
-func enableWhisper(ctx *cli.Context) bool {
-	for _, flag := range whisperFlags {
-		if ctx.GlobalIsSet(flag.GetName()) {
-			return true
-		}
-	}
-	return false
 }
 
 func makeFullNode(ctx *cli.Context) *node.Node {
@@ -153,22 +137,6 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 		cfg.Ber.ConstantinopleOverride = new(big.Int).SetUint64(ctx.GlobalUint64(utils.ConstantinopleOverrideFlag.Name))
 	}
 	utils.RegisterBerithService(stack, &cfg.Ber)
-
-	// Whisper must be explicitly enabled by specifying at least 1 whisper flag or in dev mode
-	shhEnabled := enableWhisper(ctx)
-	shhAutoEnabled := !ctx.GlobalIsSet(utils.WhisperEnabledFlag.Name) && ctx.GlobalIsSet(utils.DeveloperFlag.Name)
-	if shhEnabled || shhAutoEnabled {
-		if ctx.GlobalIsSet(utils.WhisperMaxMessageSizeFlag.Name) {
-			cfg.Shh.MaxMessageSize = uint32(ctx.Int(utils.WhisperMaxMessageSizeFlag.Name))
-		}
-		if ctx.GlobalIsSet(utils.WhisperMinPOWFlag.Name) {
-			cfg.Shh.MinimumAcceptedPOW = ctx.Float64(utils.WhisperMinPOWFlag.Name)
-		}
-		if ctx.GlobalIsSet(utils.WhisperRestrictConnectionBetweenLightClientsFlag.Name) {
-			cfg.Shh.RestrictConnectionBetweenLightClients = true
-		}
-		utils.RegisterShhService(stack, &cfg.Shh)
-	}
 
 	// Add the Berith Stats daemon if requested.
 	if cfg.BerithStats.URL != "" {
@@ -191,7 +159,17 @@ func dumpConfig(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	io.WriteString(os.Stdout, comment)
-	os.Stdout.Write(out)
+
+	dump := os.Stdout
+	if ctx.NArg() > 0 {
+		dump, err = os.OpenFile(ctx.Args().Get(0), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer dump.Close()
+	}
+	dump.WriteString(comment)
+	dump.Write(out)
+
 	return nil
 }

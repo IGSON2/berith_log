@@ -56,7 +56,6 @@ import (
 	"github.com/BerithFoundation/berith-chain/p2p/nat"
 	"github.com/BerithFoundation/berith-chain/p2p/netutil"
 	"github.com/BerithFoundation/berith-chain/params"
-	whisper "github.com/BerithFoundation/berith-chain/whisper/whisperv6"
 	"gopkg.in/urfave/cli.v1"
 )
 

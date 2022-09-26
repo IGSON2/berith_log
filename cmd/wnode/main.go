@@ -43,8 +43,6 @@ import (
 	"github.com/BerithFoundation/berith-chain/p2p"
 	"github.com/BerithFoundation/berith-chain/p2p/enode"
 	"github.com/BerithFoundation/berith-chain/p2p/nat"
-	"github.com/BerithFoundation/berith-chain/whisper/mailserver"
-	whisper "github.com/BerithFoundation/berith-chain/whisper/whisperv6"
 	"golang.org/x/crypto/pbkdf2"
 )
 

@@ -17,17 +17,26 @@
 package accounts
 
 import (
-	"fmt"
 	"reflect"
 	"sort"
 	"sync"
 
+	"github.com/BerithFoundation/berith-chain/common"
 	"github.com/BerithFoundation/berith-chain/event"
 )
+
+// Config contains the settings of the global account manager.
+//
+// TODO(rjl493456442, karalabe, holiman): Get rid of this when account management
+// is removed in favor of Clef.
+type Config struct {
+	InsecureUnlockAllowed bool // Whether account unlocking in insecure environment is allowed
+}
 
 // Manager is an overarching account manager that can communicate with various
 // backends for signing transactions.
 type Manager struct {
+	config   *Config                    // Global account manager configurations
 	backends map[reflect.Type][]Backend // Index of backends currently registered
 	updaters []event.Subscription       // Wallet update subscriptions for all backends
 	updates  chan WalletEvent           // Subscription sink for backend wallet changes
@@ -41,8 +50,7 @@ type Manager struct {
 
 // NewManager creates a generic account manager to sign transaction via various
 // supported backends.
-func NewManager(backends ...Backend) *Manager {
-	fmt.Println("NewManager() 호출")
+func NewManager(config *Config, backends ...Backend) *Manager {
 	// Retrieve the initial list of wallets from the backends and sort by URL
 	var wallets []Wallet
 	for _, backend := range backends {
@@ -53,11 +61,11 @@ func NewManager(backends ...Backend) *Manager {
 
 	subs := make([]event.Subscription, len(backends))
 	for i, backend := range backends {
-		fmt.Println("backend Type : ", reflect.TypeOf(backend))
 		subs[i] = backend.Subscribe(updates)
 	}
 	// Assemble the account manager and return
 	am := &Manager{
+		config:   config,
 		backends: make(map[reflect.Type][]Backend),
 		updaters: subs,
 		updates:  updates,
@@ -68,23 +76,26 @@ func NewManager(backends ...Backend) *Manager {
 		kind := reflect.TypeOf(backend)
 		am.backends[kind] = append(am.backends[kind], backend)
 	}
-	fmt.Println("Manager.backends : ", am.backends)
 	go am.update()
 
 	return am
 }
 
-// Close terminates the account manager's internals notification processes.
+// Close terminates the account manager's internal notification processes.
 func (am *Manager) Close() error {
 	errc := make(chan error)
 	am.quit <- errc
 	return <-errc
 }
 
+// Config returns the configuration of account manager.
+func (am *Manager) Config() *Config {
+	return am.config
+}
+
 // update is the wallet event loop listening for notifications from the backends
 // and updating the cache of wallets.
 func (am *Manager) update() {
-	fmt.Println("Manager.update() 호출")
 	// Close all subscriptions when the manager terminates
 	defer func() {
 		am.lock.Lock()
@@ -99,7 +110,6 @@ func (am *Manager) update() {
 	for {
 		select {
 		case event := <-am.updates:
-			fmt.Println("Manager.update() - am.updates 개방 후 하위로직 실행")
 			// Wallet event arrived, update local cache
 			am.lock.Lock()
 			switch event.Kind {
@@ -131,6 +141,11 @@ func (am *Manager) Wallets() []Wallet {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
 
+	return am.walletsNoLock()
+}
+
+// walletsNoLock returns all registered wallets. Callers must hold am.lock.
+func (am *Manager) walletsNoLock() []Wallet {
 	cpy := make([]Wallet, len(am.wallets))
 	copy(cpy, am.wallets)
 	return cpy
@@ -145,7 +160,7 @@ func (am *Manager) Wallet(url string) (Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, wallet := range am.Wallets() {
+	for _, wallet := range am.walletsNoLock() {
 		if wallet.URL() == parsed {
 			return wallet, nil
 		}
@@ -153,12 +168,23 @@ func (am *Manager) Wallet(url string) (Wallet, error) {
 	return nil, ErrUnknownWallet
 }
 
+// Accounts returns all account addresses of all wallets within the account manager
+func (am *Manager) Accounts() []common.Address {
+	am.lock.RLock()
+	defer am.lock.RUnlock()
+
+	addresses := make([]common.Address, 0) // return [] instead of nil if empty
+	for _, wallet := range am.wallets {
+		for _, account := range wallet.Accounts() {
+			addresses = append(addresses, account.Address)
+		}
+	}
+	return addresses
+}
+
 // Find attempts to locate the wallet corresponding to a specific account. Since
 // accounts can be dynamically added to and removed from wallets, this method has
 // a linear runtime in the number of wallets.
-//
-// Find는 특정한 계좌에 해당하는 지갑 탐색을 시도한다. 계좌가 동적으로 지갑에 추가되거나
-// 지워질 수 있던 때 부터 이 메서드는 지갑 수 만큼의 1차원 런타임을 차지했다.
 func (am *Manager) Find(account Account) (Wallet, error) {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
@@ -174,7 +200,6 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.
 func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
-	fmt.Println("accounts.go 174 - Manager.Subscribe() 호출")
 	return am.feed.Subscribe(sink)
 }
 
