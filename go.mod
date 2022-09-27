@@ -3,7 +3,7 @@ module berith-chain
 go 1.14
 
 require (
-	github.com/Azure/azure-storage-blob-go v0.15.0
+	github.com/Azure/azure-storage-blob-go v0.7.0
 	github.com/BerithFoundation/berith-chain v0.0.0-00010101000000-000000000000
 	github.com/VictoriaMetrics/fastcache v1.12.0
 	github.com/aristanetworks/goarista v0.0.0-20200429182514-19402535e24e
@@ -28,8 +28,7 @@ require (
 	github.com/influxdata/influxdb v1.8.3
 	github.com/jackpal/go-nat-pmp v1.0.2
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/karalabe/hid v1.0.0
-	github.com/karalabe/usb v0.0.2 // indirect
+	github.com/karalabe/usb v0.0.2
 	github.com/maruel/panicparse v1.6.2 // indirect
 	github.com/mattn/go-colorable v0.1.7
 	github.com/mattn/go-isatty v0.0.12

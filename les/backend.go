@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"berith-chain/internals/berithapi"
+
 	"github.com/BerithFoundation/berith-chain/accounts"
 	"github.com/BerithFoundation/berith-chain/berith"
 	"github.com/BerithFoundation/berith-chain/berith/downloader"
@@ -36,7 +38,6 @@ import (
 	"github.com/BerithFoundation/berith-chain/core/rawdb"
 	"github.com/BerithFoundation/berith-chain/core/types"
 	"github.com/BerithFoundation/berith-chain/event"
-	"berith-chain/internals/berithapi"
 	"github.com/BerithFoundation/berith-chain/light"
 	"github.com/BerithFoundation/berith-chain/log"
 	"github.com/BerithFoundation/berith-chain/node"
@@ -78,8 +79,8 @@ type LightBerith struct {
 	wg sync.WaitGroup
 }
 
-func New(ctx *node.ServiceContext, config *berith.Config) (*LightBerith, error) {
-	chainDb, err := berith.CreateDB(ctx, config, "lightchaindata")
+func New(stack *node.Node, config *berith.Config) (*LightBerith, error) {
+	chainDb, err := stack.OpenDatabase("lightchaindata", config.DatabaseCache, config.DatabaseHandles, "berith/db/chaindata/", false)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +94,7 @@ func New(ctx *node.ServiceContext, config *berith.Config) (*LightBerith, error) 
 	quitSync := make(chan struct{})
 
 	stakingDB := &staking.StakingDB{NoPruning: config.NoPruning}
-	stakingDBPath := ctx.ResolvePath("stakingDB")
+	stakingDBPath := stack.ResolvePath("stakingDB")
 	if stkErr := stakingDB.CreateDB(stakingDBPath, staking.NewStakers); stkErr != nil {
 		return nil, stkErr
 	}
@@ -105,10 +106,10 @@ func New(ctx *node.ServiceContext, config *berith.Config) (*LightBerith, error) 
 			iConfig: light.DefaultClientIndexerConfig,
 		},
 		chainConfig:    chainConfig,
-		eventMux:       ctx.EventMux,
+		eventMux:       stack.EventMux(),
 		peers:          peers,
 		reqDist:        newRequestDistributor(peers, quitSync),
-		accountManager: ctx.AccountManager,
+		accountManager: stack.AccountManager(),
 		engine:         berith.CreateConsensusEngine(chainConfig, chainDb, stakingDB),
 		shutdownChan:   make(chan bool),
 		networkId:      config.NetworkId,
@@ -121,7 +122,7 @@ func New(ctx *node.ServiceContext, config *berith.Config) (*LightBerith, error) 
 	lber.retriever = newRetrieveManager(peers, lber.reqDist, lber.serverPool)
 
 	lber.odr = NewLesOdr(chainDb, light.DefaultClientIndexerConfig, lber.retriever)
-	lber.chtIndexer = light.NewChtIndexer(chainDb, lber.odr, params.CHTFrequencyClient, params.HelperTrieConfirmations)
+	lber.chtIndexer = light.NewChtIndexer(chainDb, lber.odr, params.CHTFrequency, params.HelperTrieConfirmations)
 	lber.bloomTrieIndexer = light.NewBloomTrieIndexer(chainDb, lber.odr, params.BloomBitsBlocksClient, params.BloomTrieFrequency)
 	lber.odr.SetIndexers(lber.chtIndexer, lber.bloomTrieIndexer, lber.bloomIndexer)
 

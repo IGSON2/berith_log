@@ -105,7 +105,7 @@ type Berith struct {
 
 // New creates a new Berith object (including the
 // initialisation of the common Berith object)
-func New(ctx *node.ServiceContext, config *Config) (*Berith, error) {
+func New(stack *node.Node, config *Config) (*Berith, error) {
 	// Ensure configuration values are compatible and sane
 	if config.SyncMode == downloader.LightSync {
 		return nil, errors.New("can't run berith.Berith in light sync mode, use les.LightBerith")
@@ -118,7 +118,8 @@ func New(ctx *node.ServiceContext, config *Config) (*Berith, error) {
 		config.MinerGasPrice = new(big.Int).Set(DefaultConfig.MinerGasPrice)
 	}
 	// Assemble the Berith object
-	chainDb, err := CreateDB(ctx, config, "chaindata")
+	chainDb, err := stack.OpenDatabaseWithFreezer("chaindata", config.DatabaseCache, config.DatabaseHandles, config.DatabaseFreezer, "berith/db/chaindata/", false)
+
 	if err != nil {
 		return nil, err
 	}
@@ -129,17 +130,18 @@ func New(ctx *node.ServiceContext, config *Config) (*Berith, error) {
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	stakingDB := &staking.StakingDB{NoPruning: config.NoPruning}
-	stakingDBPath := ctx.ResolvePath("stakingDB")
+	stakingDBPath := stack.Config().ResolvePath("stakingDB")
 	if stkErr := stakingDB.CreateDB(stakingDBPath, staking.NewStakers); stkErr != nil {
 		return nil, stkErr
 	}
 	engine := CreateConsensusEngine(chainConfig, chainDb, stakingDB)
+
 	ber := &Berith{
 		config:         config,
 		chainDb:        chainDb,
 		chainConfig:    chainConfig,
-		eventMux:       ctx.EventMux,
-		accountManager: ctx.AccountManager,
+		eventMux:       stack.EventMux(),
+		accountManager: stack.AccountManager(),
 		engine:         engine,
 		shutdownChan:   make(chan bool),
 		networkID:      config.NetworkId,
@@ -154,7 +156,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Berith, error) {
 
 	if !config.SkipBcVersionCheck {
 		bcVersion := rawdb.ReadDatabaseVersion(chainDb)
-		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
+		if *bcVersion != core.BlockChainVersion && bcVersion != nil {
 			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d).\n", bcVersion, core.BlockChainVersion)
 		}
 		rawdb.WriteDatabaseVersion(chainDb, core.BlockChainVersion)
@@ -180,7 +182,7 @@ func New(ctx *node.ServiceContext, config *Config) (*Berith, error) {
 	ber.bloomIndexer.Start(ber.blockchain)
 
 	if config.TxPool.Journal != "" {
-		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
+		config.TxPool.Journal = stack.ResolvePath(config.TxPool.Journal)
 	}
 	ber.txPool = core.NewTxPool(config.TxPool, ber.chainConfig, ber.blockchain)
 
@@ -216,18 +218,6 @@ func makeExtraData(extra []byte) []byte {
 		extra = nil
 	}
 	return extra
-}
-
-// CreateDB creates the chain database.
-func CreateDB(ctx *node.ServiceContext, config *Config, name string) (berithdb.Database, error) {
-	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
-	if err != nil {
-		return nil, err
-	}
-	if db, ok := db.(*berithdb.LDBDatabase); ok {
-		db.Meter("berith/db/chaindata/")
-	}
-	return db, nil
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Berith service
