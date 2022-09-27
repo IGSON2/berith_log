@@ -29,7 +29,6 @@ import (
 	"github.com/BerithFoundation/berith-chain/accounts"
 	"github.com/BerithFoundation/berith-chain/common"
 	"github.com/BerithFoundation/berith-chain/core/types"
-	"github.com/BerithFoundation/berith-chain/crypto"
 	"github.com/BerithFoundation/berith-chain/log"
 	"github.com/karalabe/usb"
 )
@@ -525,12 +524,7 @@ func (w *wallet) signHash(account accounts.Account, hash []byte) ([]byte, error)
 }
 
 // SignData signs keccak256(data). The mimetype parameter describes the type of data being signed
-func (w *wallet) SignData(account accounts.Account, mimeType string, data []byte) ([]byte, error) {
-
-	// Unless we are doing 712 signing, simply dispatch to signHash
-	if !(mimeType == accounts.MimetypeTypedData && len(data) == 66 && data[0] == 0x19 && data[1] == 0x01) {
-		return w.signHash(account, crypto.Keccak256(data))
-	}
+func (w *wallet) SignData(account accounts.Account, hash []byte) ([]byte, error) {
 
 	// dispatch to 712 signing if the mimetype is TypedData and the format matches
 	w.stateLock.RLock() // Comms have own mutex, this is for the state fields
@@ -561,7 +555,7 @@ func (w *wallet) SignData(account accounts.Account, mimeType string, data []byte
 		w.hub.commsLock.Unlock()
 	}()
 	// Sign the transaction
-	signature, err := w.driver.SignTypedMessage(path, data[2:34], data[34:66])
+	signature, err := w.driver.SignTypedMessage(path, hash[2:34], hash[34:66])
 	if err != nil {
 		return nil, err
 	}
@@ -571,8 +565,8 @@ func (w *wallet) SignData(account accounts.Account, mimeType string, data []byte
 // SignDataWithPassphrase implements accounts.Wallet, attempting to sign the given
 // data with the given account using passphrase as extra authentication.
 // Since USB wallets don't rely on passphrases, these are silently ignored.
-func (w *wallet) SignDataWithPassphrase(account accounts.Account, passphrase, mimeType string, data []byte) ([]byte, error) {
-	return w.SignData(account, mimeType, data)
+func (w *wallet) SignDataWithPassphrase(account accounts.Account, passphrase, hash []byte) ([]byte, error) {
+	return w.SignData(account, hash)
 }
 
 func (w *wallet) SignText(account accounts.Account, text []byte) ([]byte, error) {

@@ -2,7 +2,8 @@ package staking
 
 import (
 	"fmt"
-	"github.com/syndtr/goleveldb/leveldb/util"
+
+	"github.com/BerithFoundation/berith-chain/core/rawdb"
 
 	"github.com/BerithFoundation/berith-chain/common"
 	"github.com/BerithFoundation/berith-chain/rlp"
@@ -17,8 +18,9 @@ import (
 Database that stores staker information
 */
 type StakingDB struct {
-	creator   createFunc
-	stakeDB   *berithdb.LDBDatabase
+	creator createFunc
+	// Staking DB가 berithdb.Database 타입이 되는게 맞는가? 아니면 berithdb.KeyValueStore 이어야 하는가?
+	stakeDB   berithdb.Database
 	NoPruning bool // When gc mode is archive, this value is true or false.
 }
 
@@ -29,8 +31,7 @@ func (s *StakingDB) CreateDB(filename string, creator createFunc) error {
 	if s.stakeDB != nil {
 		return nil
 	}
-
-	db, err := berithdb.NewLDBDatabase(filename, 128, 1024)
+	db, err := rawdb.NewLevelDBDatabase(filename, 128, 1024, "StakingDb", false)
 	if err != nil {
 		fmt.Println(err.Error())
 		return err
@@ -137,7 +138,7 @@ func (s *StakingDB) Clean(chain consensus.ChainReader, header *types.Header) err
 		}
 		header = chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	}
-	return s.stakeDB.LDB().CompactRange(util.Range{})
+	return s.stakeDB.Compact(nil, nil)
 }
 
 func (s *StakingDB) isExist(key []byte) (bool, error) {

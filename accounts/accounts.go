@@ -35,13 +35,6 @@ type Account struct {
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 
-const (
-	MimetypeDataWithValidator = "data/validator"
-	MimetypeTypedData         = "data/typed"
-	MimetypeClique            = "application/x-clique-header"
-	MimetypeTextPlain         = "text/plain"
-)
-
 // Wallet represents a software or hardware wallet that might contain one or more
 // accounts (derived from the same seed).
 type Wallet interface {
@@ -110,13 +103,13 @@ type Wallet interface {
 	// about which fields or actions are needed. The user may retry by providing
 	// the needed details via SignDataWithPassphrase, or by other means (e.g. unlock
 	// the account in a keystore).
-	SignData(account Account, mimeType string, data []byte) ([]byte, error)
+	SignData(account Account, hasha []byte) ([]byte, error)
 
 	// SignDataWithPassphrase is identical to SignData, but also takes a password
 	// NOTE: there's a chance that an erroneous call might mistake the two strings, and
 	// supply password in the mimetype field, or vice versa. Thus, an implementation
 	// should never echo the mimetype or return the mimetype in the error-response
-	SignDataWithPassphrase(account Account, passphrase, mimeType string, data []byte) ([]byte, error)
+	SignDataWithPassphrase(account Account, passphrase, data []byte) ([]byte, error)
 
 	// SignText requests the wallet to sign the hash of a given piece of data, prefixed
 	// by the Ethereum prefix scheme

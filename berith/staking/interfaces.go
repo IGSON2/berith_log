@@ -1,10 +1,11 @@
 package staking
 
 import (
-	"github.com/BerithFoundation/berith-chain/consensus"
-	"github.com/BerithFoundation/berith-chain/core/types"
 	"io"
 	"math/big"
+
+	"github.com/BerithFoundation/berith-chain/consensus"
+	"github.com/BerithFoundation/berith-chain/core/types"
 
 	"github.com/BerithFoundation/berith-chain/rlp"
 
@@ -40,5 +41,5 @@ type DataBase interface {
 	Commit(key string, stks Stakers) error
 	NewStakers() Stakers
 	Close()
-	Clean(chain consensus.ChainReader, header *types.Header) error
+	Clean(chain consensus.ChainHeaderReader, header *types.Header) error
 }

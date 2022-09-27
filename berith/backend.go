@@ -167,7 +167,17 @@ func New(stack *node.Node, config *Config) (*Berith, error) {
 			EWASMInterpreter:        config.EWASMInterpreter,
 			EVMInterpreter:          config.EVMInterpreter,
 		}
-		cacheConfig = &core.CacheConfig{Disabled: config.NoPruning, TrieCleanLimit: config.TrieCleanCache, TrieDirtyLimit: config.TrieDirtyCache, TrieTimeLimit: config.TrieTimeout}
+		cacheConfig = &core.CacheConfig{
+			TrieCleanLimit:      config.TrieCleanCache,
+			TrieCleanJournal:    stack.ResolvePath(config.TrieCleanCacheJournal),
+			TrieCleanRejournal:  config.TrieCleanCacheRejournal,
+			TrieCleanNoPrefetch: config.NoPrefetch,
+			TrieDirtyLimit:      config.TrieDirtyCache,
+			TrieDirtyDisabled:   config.NoPruning,
+			TrieTimeLimit:       config.TrieTimeout,
+			SnapshotLimit:       config.SnapshotCache,
+			Preimages:           config.Preimages,
+		}
 	)
 	ber.blockchain, err = core.NewBlockChain(stakingDB, chainDb, cacheConfig, ber.chainConfig, ber.engine, vmConfig, ber.shouldPreserve)
 	if err != nil {
@@ -401,7 +411,7 @@ func (s *Berith) StartMining(threads int) error {
 				return fmt.Errorf("signer missing: %v", err)
 			}
 			// wallet.SighHash는 결국 keystore.SignHash()이다.
-			bsrr.Authorize(berithBase, wallet.SignHash)
+			bsrr.Authorize(berithBase, wallet.SignData)
 		}
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.

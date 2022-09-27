@@ -21,6 +21,7 @@ Y8888P' Y88888P 88   YD Y888888P    YP    YP   YP
 package bsrr
 
 import (
+	"berith-chain/trie"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -579,7 +580,7 @@ func (c *BSRR) Finalize(chain consensus.ChainReader, header *types.Header, state
 	header.UncleHash = types.CalcUncleHash(nil)
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts), nil
+	return types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil)), nil
 }
 
 // Authorize injects a private key into the consensus engine to mint new blocks
@@ -599,7 +600,7 @@ func (c *BSRR) Authorize(signer common.Address, signFn SignerFn) {
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 //
-// 
+//
 func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	fmt.Println("BSRR.Seal() 호출")
 	header := block.Header()
