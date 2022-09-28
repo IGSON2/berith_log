@@ -179,7 +179,7 @@ func New(stack *node.Node, config *Config) (*Berith, error) {
 			Preimages:           config.Preimages,
 		}
 	)
-	ber.blockchain, err = core.NewBlockChain(stakingDB, chainDb, cacheConfig, ber.chainConfig, ber.engine, vmConfig, ber.shouldPreserve)
+	ber.blockchain, err = core.NewBlockChain(stakingDB, chainDb, cacheConfig, ber.chainConfig, ber.engine, vmConfig, ber.shouldPreserve, &config.TxLookupLimit)
 	if err != nil {
 		return nil, err
 	}

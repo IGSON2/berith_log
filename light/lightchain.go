@@ -35,7 +35,7 @@ import (
 	"github.com/BerithFoundation/berith-chain/log"
 	"github.com/BerithFoundation/berith-chain/params"
 	"github.com/BerithFoundation/berith-chain/rlp"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 var (
@@ -76,7 +76,7 @@ type LightChain struct {
 // NewLightChain returns a fully initialised light chain using information
 // available in the database. It initialises the default Ethereum header
 // validator.
-func NewLightChain(odr OdrBackend, config *params.ChainConfig, engine consensus.Engine) (*LightChain, error) {
+func NewLightChain(odr OdrBackend, config *params.ChainConfig, engine consensus.Engine, checkpoint *params.TrustedCheckpoint) (*LightChain, error) {
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
 	blockCache, _ := lru.New(blockCacheLimit)
@@ -100,8 +100,8 @@ func NewLightChain(odr OdrBackend, config *params.ChainConfig, engine consensus.
 	if bc.genesisBlock == nil {
 		return nil, core.ErrNoGenesis
 	}
-	if cp, ok := trustedCheckpoints[bc.genesisBlock.Hash()]; ok {
-		bc.addTrustedCheckpoint(cp)
+	if checkpoint != nil {
+		bc.AddTrustedCheckpoint(checkpoint)
 	}
 	if err := bc.loadLastState(); err != nil {
 		return nil, err
@@ -117,20 +117,20 @@ func NewLightChain(odr OdrBackend, config *params.ChainConfig, engine consensus.
 	return bc, nil
 }
 
-// addTrustedCheckpoint adds a trusted checkpoint to the blockchain
-func (self *LightChain) addTrustedCheckpoint(cp *params.TrustedCheckpoint) {
-	if self.odr.ChtIndexer() != nil {
-		StoreChtRoot(self.chainDb, cp.SectionIndex, cp.SectionHead, cp.CHTRoot)
-		self.odr.ChtIndexer().AddCheckpoint(cp.SectionIndex, cp.SectionHead)
+// AddTrustedCheckpoint adds a trusted checkpoint to the blockchain
+func (lc *LightChain) AddTrustedCheckpoint(cp *params.TrustedCheckpoint) {
+	if lc.odr.ChtIndexer() != nil {
+		StoreChtRoot(lc.chainDb, cp.SectionIndex, cp.SectionHead, cp.CHTRoot)
+		lc.odr.ChtIndexer().AddCheckpoint(cp.SectionIndex, cp.SectionHead)
 	}
-	if self.odr.BloomTrieIndexer() != nil {
-		StoreBloomTrieRoot(self.chainDb, cp.SectionIndex, cp.SectionHead, cp.BloomRoot)
-		self.odr.BloomTrieIndexer().AddCheckpoint(cp.SectionIndex, cp.SectionHead)
+	if lc.odr.BloomTrieIndexer() != nil {
+		StoreBloomTrieRoot(lc.chainDb, cp.SectionIndex, cp.SectionHead, cp.BloomRoot)
+		lc.odr.BloomTrieIndexer().AddCheckpoint(cp.SectionIndex, cp.SectionHead)
 	}
-	if self.odr.BloomIndexer() != nil {
-		self.odr.BloomIndexer().AddCheckpoint(cp.SectionIndex, cp.SectionHead)
+	if lc.odr.BloomIndexer() != nil {
+		lc.odr.BloomIndexer().AddCheckpoint(cp.SectionIndex, cp.SectionHead)
 	}
-	log.Info("Added trusted checkpoint", "chain", cp.Name, "block", (cp.SectionIndex+1)*self.indexerConfig.ChtSize-1, "hash", cp.SectionHead)
+	log.Info("Added trusted checkpoint", "block", (cp.SectionIndex+1)*lc.indexerConfig.ChtSize-1, "hash", cp.SectionHead)
 }
 
 func (self *LightChain) getProcInterrupt() bool {
@@ -168,7 +168,7 @@ func (bc *LightChain) SetHead(head uint64) {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	bc.hc.SetHead(head, nil)
+	bc.hc.SetHead(head, nil, nil)
 	bc.loadLastState()
 }
 
@@ -354,43 +354,45 @@ func (self *LightChain) postChainEvents(events []interface{}) {
 //
 // In the case of a light chain, InsertHeaderChain also creates and posts light
 // chain events when necessary.
-func (self *LightChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
+func (lc *LightChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
 	start := time.Now()
-	if i, err := self.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
+	if i, err := lc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
 		return i, err
 	}
 
 	// Make sure only one thread manipulates the chain at once
-	self.chainmu.Lock()
+	lc.chainmu.Lock()
 	defer func() {
-		self.chainmu.Unlock()
+		lc.chainmu.Unlock()
 		time.Sleep(time.Millisecond * 10) // ugly hack; do not hog chain lock in case syncing is CPU-limited by validation
 	}()
 
-	self.wg.Add(1)
-	defer self.wg.Done()
+	lc.wg.Add(1)
+	defer lc.wg.Done()
 
-	var events []interface{}
-	whFunc := func(header *types.Header) error {
-		self.mu.Lock()
-		defer self.mu.Unlock()
+	lc.wg.Add(1)
+	defer lc.wg.Done()
 
-		status, err := self.hc.WriteHeader(header)
-
-		switch status {
-		case core.CanonStatTy:
-			log.Debug("Inserted new header", "number", header.Number, "hash", header.Hash())
-			events = append(events, core.ChainEvent{Block: types.NewBlockWithHeader(header), Hash: header.Hash()})
-
-		case core.SideStatTy:
-			log.Debug("Inserted forked header", "number", header.Number, "hash", header.Hash())
-			events = append(events, core.ChainSideEvent{Block: types.NewBlockWithHeader(header)})
-		}
-		return err
+	status, err := lc.hc.InsertHeaderChain(chain, start)
+	if err != nil || len(chain) == 0 {
+		return 0, err
 	}
-	i, err := self.hc.InsertHeaderChain(chain, whFunc, start)
-	self.postChainEvents(events)
-	return i, err
+
+	// Create chain event for the new head block of this insertion.
+	var (
+		events     = make([]interface{}, 0, 1)
+		lastHeader = chain[len(chain)-1]
+		block      = types.NewBlockWithHeader(lastHeader)
+	)
+	switch status {
+	case core.CanonStatTy:
+		events = append(events, core.ChainEvent{Block: block, Hash: block.Hash()})
+	case core.SideStatTy:
+		events = append(events, core.ChainSideEvent{Block: block})
+	}
+	lc.postChainEvents(events)
+
+	return 0, err
 }
 
 // CurrentHeader retrieves the current head header of the canonical chain. The
@@ -411,6 +413,17 @@ func (self *LightChain) GetTdByHash(hash common.Hash) *big.Int {
 	return self.hc.GetTdByHash(hash)
 }
 
+// GetHeaderByNumberOdr retrieves the total difficult from the database or
+// network by hash and number, caching it (associated with its hash) if found.
+func (lc *LightChain) GetTdOdr(ctx context.Context, hash common.Hash, number uint64) *big.Int {
+	td := lc.GetTd(hash, number)
+	if td != nil {
+		return td
+	}
+	td, _ = GetTd(ctx, lc.odr, hash, number)
+	return td
+}
+
 // GetHeader retrieves a block header from the database by hash and number,
 // caching it if found.
 func (self *LightChain) GetHeader(hash common.Hash, number uint64) *types.Header {
@@ -427,6 +440,11 @@ func (self *LightChain) GetHeaderByHash(hash common.Hash) *types.Header {
 // it if present.
 func (bc *LightChain) HasHeader(hash common.Hash, number uint64) bool {
 	return bc.hc.HasHeader(hash, number)
+}
+
+// GetCanonicalHash returns the canonical hash for a given block number
+func (bc *LightChain) GetCanonicalHash(number uint64) common.Hash {
+	return bc.hc.GetCanonicalHash(number)
 }
 
 // GetBlockHashesFromHash retrieves a number of block hashes starting at a given

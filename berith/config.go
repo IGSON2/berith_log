@@ -33,6 +33,7 @@ import (
 var DefaultConfig = Config{
 	SyncMode:           downloader.FullSync,
 	NetworkId:          101,
+	TxLookupLimit:      2350000,
 	LightPeers:         100,
 	UltraLightFraction: 75,
 	DatabaseCache:      512,
@@ -78,6 +79,8 @@ type Config struct {
 
 	NoPruning  bool
 	NoPrefetch bool // Whether to disable prefetching and only load state on demand
+
+	TxLookupLimit uint64 `toml:",omitempty"` // The maximum number of blocks from head whose tx indices are reserved.
 
 	// Whitelist of required block number -> hash values to accept
 	Whitelist map[uint64]common.Hash `toml:"-"`

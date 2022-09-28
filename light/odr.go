@@ -44,6 +44,7 @@ type OdrBackend interface {
 	BloomTrieIndexer() *core.ChainIndexer
 	BloomIndexer() *core.ChainIndexer
 	Retrieve(ctx context.Context, req OdrRequest) error
+	RetrieveTxStatus(ctx context.Context, req *TxStatusRequest) error
 	IndexerConfig() *IndexerConfig
 }
 
@@ -84,7 +85,6 @@ func StorageTrieID(state *TrieID, addrHash, root common.Hash) *TrieID {
 
 // TrieRequest is the ODR request type for state/storage trie entries
 type TrieRequest struct {
-	OdrRequest
 	Id    *TrieID
 	Key   []byte
 	Proof *NodeSet
@@ -97,7 +97,6 @@ func (req *TrieRequest) StoreResult(db berithdb.Database) {
 
 // CodeRequest is the ODR request type for retrieving contract code
 type CodeRequest struct {
-	OdrRequest
 	Id   *TrieID // references storage trie of the account
 	Hash common.Hash
 	Data []byte
@@ -105,14 +104,14 @@ type CodeRequest struct {
 
 // StoreResult stores the retrieved data in local database
 func (req *CodeRequest) StoreResult(db berithdb.Database) {
-	db.Put(req.Hash[:], req.Data)
+	rawdb.WriteCode(db, req.Hash, req.Data)
 }
 
 // BlockRequest is the ODR request type for retrieving block bodies
 type BlockRequest struct {
-	OdrRequest
 	Hash   common.Hash
 	Number uint64
+	Header *types.Header
 	Rlp    []byte
 }
 
@@ -121,12 +120,13 @@ func (req *BlockRequest) StoreResult(db berithdb.Database) {
 	rawdb.WriteBodyRLP(db, req.Hash, req.Number, req.Rlp)
 }
 
-// ReceiptsRequest is the ODR request type for retrieving block bodies
+// ReceiptsRequest is the ODR request type for retrieving receipts.
 type ReceiptsRequest struct {
-	OdrRequest
-	Hash     common.Hash
-	Number   uint64
-	Receipts types.Receipts
+	Untrusted bool // Indicator whether the result retrieved is trusted or not
+	Hash      common.Hash
+	Number    uint64
+	Header    *types.Header
+	Receipts  types.Receipts
 }
 
 // StoreResult stores the retrieved data in local database
@@ -134,9 +134,8 @@ func (req *ReceiptsRequest) StoreResult(db berithdb.Database) {
 	rawdb.WriteReceipts(db, req.Hash, req.Number, req.Receipts)
 }
 
-// ChtRequest is the ODR request type for state/storage trie entries
+// ChtRequest is the ODR request type for retrieving header by Canonical Hash Trie
 type ChtRequest struct {
-	OdrRequest
 	Config           *IndexerConfig
 	ChtNum, BlockNum uint64
 	ChtRoot          common.Hash
@@ -148,7 +147,6 @@ type ChtRequest struct {
 // StoreResult stores the retrieved data in local database
 func (req *ChtRequest) StoreResult(db berithdb.Database) {
 	hash, num := req.Header.Hash(), req.Header.Number.Uint64()
-
 	rawdb.WriteHeader(db, req.Header)
 	rawdb.WriteTd(db, hash, num, req.Td)
 	rawdb.WriteCanonicalHash(db, hash, num)
@@ -177,3 +175,19 @@ func (req *BloomRequest) StoreResult(db berithdb.Database) {
 		rawdb.WriteBloomBits(db, req.BitIdx, sectionIdx, sectionHead, req.BloomBits[i])
 	}
 }
+
+// TxStatus describes the status of a transaction
+type TxStatus struct {
+	Status core.TxStatus
+	Lookup *rawdb.LegacyTxLookupEntry `rlp:"nil"`
+	Error  string
+}
+
+// TxStatusRequest is the ODR request type for retrieving transaction status
+type TxStatusRequest struct {
+	Hashes []common.Hash
+	Status []TxStatus
+}
+
+// StoreResult stores the retrieved data in local database
+func (req *TxStatusRequest) StoreResult(db berithdb.Database) {}

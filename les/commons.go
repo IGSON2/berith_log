@@ -19,24 +19,41 @@ package les
 import (
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/BerithFoundation/berith-chain/berith"
 	"github.com/BerithFoundation/berith-chain/berithdb"
 	"github.com/BerithFoundation/berith-chain/common"
 	"github.com/BerithFoundation/berith-chain/core"
+	"github.com/BerithFoundation/berith-chain/core/types"
+	"github.com/BerithFoundation/berith-chain/les/checkpointoracle"
 	"github.com/BerithFoundation/berith-chain/light"
 	"github.com/BerithFoundation/berith-chain/p2p"
 	"github.com/BerithFoundation/berith-chain/p2p/enode"
 	"github.com/BerithFoundation/berith-chain/params"
 )
 
+func errResp(code errCode, format string, v ...interface{}) error {
+	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
+}
+
+type chainReader interface {
+	CurrentHeader() *types.Header
+}
+
 // lesCommons contains fields needed by both server and client.
 type lesCommons struct {
+	genesis                      common.Hash
 	config                       *berith.Config
+	chainConfig                  *params.ChainConfig
 	iConfig                      *light.IndexerConfig
-	chainDb                      berithdb.Database
-	protocolManager              *ProtocolManager
+	chainDb, lesDb               berithdb.Database
+	chainReader                  chainReader
 	chtIndexer, bloomTrieIndexer *core.ChainIndexer
+	oracle                       *checkpointoracle.CheckpointOracle
+
+	closeCh chan struct{}
+	wg      sync.WaitGroup
 }
 
 // NodeInfo represents a short summary of the Ethereum sub-protocol metadata

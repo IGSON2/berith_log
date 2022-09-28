@@ -141,7 +141,7 @@ var (
 
 // SignerFn is a signer callback function to request a hash to be signed by a
 // backing account.
-type SignerFn func(accounts.Account, []byte) ([]byte, error)
+type SignerFn func(accounts.Account, string, []byte) ([]byte, error)
 
 // sigHash returns the hash which is used as input for the proof-of-authority
 // signing. It is the hash of the entire header apart from the 65 byte signature
@@ -214,7 +214,8 @@ type BSRR struct {
 
 	signer common.Address // Berith address of the signing key
 	signFn SignerFn       // Signer function to authorize hashes with
-	lock   sync.RWMutex   // Protects the signer fields
+
+	lock sync.RWMutex // Protects the signer fields
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 
@@ -589,18 +590,17 @@ func (c *BSRR) Finalize(chain consensus.ChainReader, header *types.Header, state
 // Authorize는 새 블록을 생성하기 위해 개인키를 합의엔진에 추가한다.
 // StartMining 에서 berithBase의 주소와 서명을 받아 인증한다.
 func (c *BSRR) Authorize(signer common.Address, signFn SignerFn) {
-	fmt.Println("signer : ", signer.Hex())
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.signer = signer
 	c.signFn = signFn
+
 }
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
-//
-//
 func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	fmt.Println("BSRR.Seal() 호출")
 	header := block.Header()
@@ -660,7 +660,7 @@ func (c *BSRR) Seal(chain consensus.ChainReader, block *types.Block, results cha
 	fmt.Println("Seal() / delay + temp : ", delay)
 
 	// Sign all the things!
-	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
+	sighash, err := signFn(accounts.Account{Address: signer}, accounts.MimetypeBsrr, sigHash(header).Bytes())
 	if err != nil {
 		return err
 	}
@@ -942,7 +942,7 @@ func (c *BSRR) supportBIP1(chain consensus.ChainReader, parent *types.Header, st
 	return stks, nil
 }
 
-//[BERITH] Method to call stakingList from cache or db
+// [BERITH] Method to call stakingList from cache or db
 func (c *BSRR) getStakers(chain consensus.ChainReader, number uint64, hash common.Hash) (staking.Stakers, error) {
 	var (
 		list   staking.Stakers
@@ -1020,7 +1020,7 @@ func (c *BSRR) getStakers(chain consensus.ChainReader, number uint64, hash commo
 	return list, nil
 }
 
-//[BERITH] Method to check the block and set the value in stakingList
+// [BERITH] Method to check the block and set the value in stakingList
 func (c *BSRR) checkBlocks(chain consensus.ChainReader, stks staking.Stakers, blocks []*types.Block) error {
 	if len(blocks) == 0 {
 		return nil
@@ -1035,7 +1035,7 @@ func (c *BSRR) checkBlocks(chain consensus.ChainReader, stks staking.Stakers, bl
 	return nil
 }
 
-//[BERITH] Method to examine transaction array and set value in stakingList
+// [BERITH] Method to examine transaction array and set value in stakingList
 func (c *BSRR) setStakersWithTxs(state *state.StateDB, chain consensus.ChainReader, stks staking.Stakers, txs []*types.Transaction, header *types.Header) error {
 	number := header.Number
 
@@ -1110,7 +1110,7 @@ func (s signers) signersMap() map[common.Address]struct{} {
 	return result
 }
 
-//[BERITH] Method that returns a list of accounts that can create a block of the received block number
+// [BERITH] Method that returns a list of accounts that can create a block of the received block number
 // 1) [0, epoch number) -> Return signers extracted from extra data of genesis
 // 2) [epoch nunber ~ ) -> Return signers extracted from staking list
 func (c *BSRR) getSigners(chain consensus.ChainReader, target *types.Header) (signers, error) {
@@ -1137,7 +1137,7 @@ func (c *BSRR) getSigners(chain consensus.ChainReader, target *types.Header) (si
 	return result, nil
 }
 
-//[BERITH] Returns signers from the extra data field.
+// [BERITH] Returns signers from the extra data field.
 func (c *BSRR) getSignersFromExtraData(header *types.Header) (signers, error) {
 	n := (len(header.Extra) - extraVanity - extraSeal) / common.AddressLength
 	if n < 1 {

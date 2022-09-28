@@ -19,10 +19,10 @@ package les
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"berith-chain/internals/berithapi"
+	"berith-chain/p2p/enode"
 
 	"github.com/BerithFoundation/berith-chain/accounts"
 	"github.com/BerithFoundation/berith-chain/berith"
@@ -32,6 +32,7 @@ import (
 	"github.com/BerithFoundation/berith-chain/berith/staking"
 	"github.com/BerithFoundation/berith-chain/common"
 	"github.com/BerithFoundation/berith-chain/common/hexutil"
+	"github.com/BerithFoundation/berith-chain/common/mclock"
 	"github.com/BerithFoundation/berith-chain/consensus"
 	"github.com/BerithFoundation/berith-chain/core"
 	"github.com/BerithFoundation/berith-chain/core/bloombits"
@@ -50,33 +51,30 @@ import (
 type LightBerith struct {
 	lesCommons
 
-	odr         *LesOdr
-	relay       *LesTxRelay
-	chainConfig *params.ChainConfig
-	// Channel for shutting down the service
-	shutdownChan chan bool
-
-	// Handlers
-	peers      *peerSet
-	txPool     *light.TxPool
-	blockchain *light.LightChain
-	serverPool *serverPool
-	reqDist    *requestDistributor
-	retriever  *retrieveManager
+	peers              *serverPeerSet
+	reqDist            *requestDistributor
+	retriever          *retrieveManager
+	odr                *LesOdr
+	relay              *lesTxRelay
+	handler            *clientHandler
+	txPool             *light.TxPool
+	blockchain         *light.LightChain
+	serverPool         *vfc.ServerPool
+	serverPoolIterator enode.Iterator
+	pruner             *pruner
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
-	bloomIndexer  *core.ChainIndexer
+	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
-	ApiBackend *LesApiBackend
-
+	ApiBackend     *LesApiBackend
 	eventMux       *event.TypeMux
 	engine         consensus.Engine
 	accountManager *accounts.Manager
+	netRPCService  *berithapi.PublicNetAPI
 
-	networkId     uint64
-	netRPCService *berithapi.PublicNetAPI
-
-	wg sync.WaitGroup
+	p2pServer  *p2p.Server
+	p2pConfig  *p2p.Config
+	udpEnabled bool
 }
 
 func New(stack *node.Node, config *berith.Config) (*LightBerith, error) {
@@ -84,13 +82,17 @@ func New(stack *node.Node, config *berith.Config) (*LightBerith, error) {
 	if err != nil {
 		return nil, err
 	}
-	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlockWithOverride(chainDb, config.Genesis, config.ConstantinopleOverride)
+	lesDb, err := stack.OpenDatabase("les.client", 0, 0, "eth/db/lesclient/", false)
+	if err != nil {
+		return nil, err
+	}
+	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlockWithOverride(chainDb, config.Genesis, config.OverrideBerlin)
 	if _, isCompat := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !isCompat {
 		return nil, genesisErr
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
-	peers := newPeerSet()
+	peers := newServerPeerSet()
 	quitSync := make(chan struct{})
 
 	stakingDB := &staking.StakingDB{NoPruning: config.NoPruning}
@@ -98,23 +100,26 @@ func New(stack *node.Node, config *berith.Config) (*LightBerith, error) {
 	if stkErr := stakingDB.CreateDB(stakingDBPath, staking.NewStakers); stkErr != nil {
 		return nil, stkErr
 	}
-
 	lber := &LightBerith{
 		lesCommons: lesCommons{
-			chainDb: chainDb,
-			config:  config,
-			iConfig: light.DefaultClientIndexerConfig,
+			genesis:     genesisHash,
+			config:      config,
+			chainConfig: chainConfig,
+			iConfig:     light.DefaultClientIndexerConfig,
+			chainDb:     chainDb,
+			lesDb:       lesDb,
+			closeCh:     make(chan struct{}),
 		},
-		chainConfig:    chainConfig,
-		eventMux:       stack.EventMux(),
 		peers:          peers,
-		reqDist:        newRequestDistributor(peers, quitSync),
+		eventMux:       stack.EventMux(),
+		reqDist:        newRequestDistributor(peers, &mclock.System{}),
 		accountManager: stack.AccountManager(),
 		engine:         berith.CreateConsensusEngine(chainConfig, chainDb, stakingDB),
-		shutdownChan:   make(chan bool),
-		networkId:      config.NetworkId,
 		bloomRequests:  make(chan chan *bloombits.Retrieval),
-		bloomIndexer:   berith.NewBloomIndexer(chainDb, params.BloomBitsBlocksClient, params.HelperTrieConfirmations),
+		bloomIndexer:   core.NewBloomIndexer(chainDb, params.BloomBitsBlocksClient, params.HelperTrieConfirmations),
+		p2pServer:      stack.Server(),
+		p2pConfig:      &stack.Config().P2P,
+		udpEnabled:     stack.Config().P2P.DiscoveryV5,
 	}
 
 	lber.relay = NewLesTxRelay(peers, lber.reqDist)

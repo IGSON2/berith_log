@@ -33,24 +33,28 @@ type Argument struct {
 
 type Arguments []Argument
 
+type ArgumentMarshaling struct {
+	Name         string
+	Type         string
+	InternalType string
+	Components   []ArgumentMarshaling
+	Indexed      bool
+}
+
 // UnmarshalJSON implements json.Unmarshaler interface
 func (argument *Argument) UnmarshalJSON(data []byte) error {
-	var extarg struct {
-		Name    string
-		Type    string
-		Indexed bool
-	}
-	err := json.Unmarshal(data, &extarg)
+	var arg ArgumentMarshaling
+	err := json.Unmarshal(data, &arg)
 	if err != nil {
 		return fmt.Errorf("argument json err: %v", err)
 	}
 
-	argument.Type, err = NewType(extarg.Type)
+	argument.Type, err = NewType(arg.Type, arg.InternalType, arg.Components)
 	if err != nil {
 		return err
 	}
-	argument.Name = extarg.Name
-	argument.Indexed = extarg.Indexed
+	argument.Name = arg.Name
+	argument.Indexed = arg.Indexed
 
 	return nil
 }
@@ -83,21 +87,21 @@ func (arguments Arguments) isTuple() bool {
 	return len(arguments) > 1
 }
 
-// Unpack performs the operation hexdata -> Go format
-func (arguments Arguments) Unpack(v interface{}, data []byte) error {
-
-	// make sure the passed value is arguments pointer
-	if reflect.Ptr != reflect.ValueOf(v).Kind() {
-		return fmt.Errorf("abi: Unpack(non-pointer %T)", v)
+// Unpack performs the operation hexdata -> Go format.
+func (arguments Arguments) Unpack(data []byte) ([]interface{}, error) {
+	if len(data) == 0 {
+		if len(arguments) != 0 {
+			return nil, fmt.Errorf("abi: attempting to unmarshall an empty string while arguments are expected")
+		}
+		// Nothing to unmarshal, return default variables
+		nonIndexedArgs := arguments.NonIndexed()
+		defaultVars := make([]interface{}, len(nonIndexedArgs))
+		for index, arg := range nonIndexedArgs {
+			defaultVars[index] = reflect.New(arg.Type.GetType())
+		}
+		return defaultVars, nil
 	}
-	marshalledValues, err := arguments.UnpackValues(data)
-	if err != nil {
-		return err
-	}
-	if arguments.isTuple() {
-		return arguments.unpackTuple(v, marshalledValues)
-	}
-	return arguments.unpackAtomic(v, marshalledValues)
+	return arguments.UnpackValues(data)
 }
 
 func (arguments Arguments) unpackTuple(v interface{}, marshalledValues []interface{}) error {
@@ -243,7 +247,7 @@ func (arguments Arguments) Pack(args ...interface{}) ([]byte, error) {
 	// input offset is the bytes offset for packed output
 	inputOffset := 0
 	for _, abiArg := range abiArgs {
-		inputOffset += getDynamicTypeOffset(abiArg.Type)
+		inputOffset += getTypeSize(abiArg.Type)
 	}
 	var ret []byte
 	for i, a := range args {
@@ -282,4 +286,15 @@ func capitalise(input string) string {
 		return ""
 	}
 	return strings.ToUpper(input[:1]) + input[1:]
+}
+
+// ToCamelCase converts an under-score string to a camel-case string
+func ToCamelCase(input string) string {
+	parts := strings.Split(input, "_")
+	for i, s := range parts {
+		if len(s) > 0 {
+			parts[i] = strings.ToUpper(s[:1]) + s[1:]
+		}
+	}
+	return strings.Join(parts, "")
 }
