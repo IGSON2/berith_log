@@ -26,6 +26,7 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/gookit/color v1.2.5
 	github.com/hashicorp/golang-lru v0.5.4
+	github.com/holiman/uint256 v1.2.1
 	github.com/huin/goupnp v1.0.0
 	github.com/influxdata/influxdb v1.8.0
 	github.com/jackpal/go-nat-pmp v1.0.2

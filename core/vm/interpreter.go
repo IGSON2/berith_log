@@ -47,6 +47,9 @@ type Config struct {
 	EWASMInterpreter string
 	// Type of the EVM interpreter
 	EVMInterpreter string
+
+	ExtraEips []int // Additional EIPS that are to be enabled
+
 }
 
 // Interpreter is used to run Berith based contracts and will utilise the
@@ -99,7 +102,8 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
-	if !cfg.JumpTable[STOP].valid {
+	cfg.ExtraEips = append(cfg.ExtraEips, []int{2929, 2200, 1884, 1344}...)
+	if cfg.JumpTable[STOP].execute == nil {
 		switch {
 		case evm.ChainConfig().IsConstantinople(evm.BlockNumber):
 			cfg.JumpTable = constantinopleInstructionSet
@@ -109,6 +113,14 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 			cfg.JumpTable = homesteadInstructionSet
 		default:
 			cfg.JumpTable = frontierInstructionSet
+		}
+	}
+
+	for i, eip := range cfg.ExtraEips {
+		if err := EnableEIP(eip, &cfg.JumpTable); err != nil {
+			// Disable it, so caller can check if it's activated or not
+			cfg.ExtraEips = append(cfg.ExtraEips[:i], cfg.ExtraEips[i+1:]...)
+			log.Error("EIP activation failed", "eip", eip, "error", err)
 		}
 	}
 
@@ -216,16 +228,19 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
 		fmt.Println("Compiling..\t", "op=", op, "[", int(op), "]")
-		if op == RETURN {
-			log.Warn("RETURN OP", "CodeByte", contract.Code)
-		}
+
 		operation := in.cfg.JumpTable[op]
-		if !operation.valid {
+		if &operation == nil {
 			log.Error("EVMInterpreter.Run / Invalid op error ", "error", err, "CodeByte", contract.Code)
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
 		}
-		if err := operation.validateStack(stack); err != nil {
-			log.Error("EVMInterpreter.Run / Validate Stack error", "error", err, "CodeByte", contract.Code)
+		// [Berith]
+		// if err := operation.validateStack(stack); err != nil {
+		if stack.len() > operation.maxStack {
+			log.Error("EVMInterpreter.Run / Stack Overflow", "error", err, "Stack.len()", stack.len(), "Operation", operation)
+			return nil, err
+		} else if stack.len() < operation.minStack {
+			log.Error("EVMInterpreter.Run / Stack Underflow", "error", err)
 			return nil, err
 		}
 		// If the operation is valid, enforce and write restrictions
@@ -240,11 +255,13 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		if operation.memorySize != nil {
 			memSize, overflow := bigUint64(operation.memorySize(stack))
 			if overflow {
+				log.Error("Overflow !")
 				return nil, errGasUintOverflow
 			}
 			// memory is expanded in words of 32 bytes. Gas
 			// is also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
+				log.Error("Gas Overflow !")
 				return nil, errGasUintOverflow
 			}
 		}
@@ -252,16 +269,20 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// cost is explicitly set so that the capture state defer method can get the proper cost
 		//
 		// 가스를 소비하고 충분한 가스가 없을 경우 오류를 반환한다.
-		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
-		if err != nil || !contract.UseGas(cost) {
-			return nil, ErrOutOfGas
-		}
+		//
+		// [Berith]
+		// cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
+		// if err != nil || !contract.UseGas(cost) {
+		// 	return nil, ErrOutOfGas
+		// }
 		if memorySize > 0 {
 			mem.Resize(memorySize)
 		}
 
+		// [Berith]
+		// cost => operation.constantGas
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, operation.constantGas, mem, stack, contract, in.evm.depth, err)
 			logged = true
 		}
 
@@ -277,6 +298,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		if operation.returns {
 			in.returnData = res
 			log.Warn("Interpreter returns", res)
+			fmt.Println("RES : ", res, "Error : ", err)
 		}
 
 		switch {
