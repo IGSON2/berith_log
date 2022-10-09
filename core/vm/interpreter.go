@@ -102,7 +102,7 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
-	cfg.ExtraEips = append(cfg.ExtraEips, []int{2929, 2200, 1884, 1344}...)
+	log.Warn("NewEVMInterpreter", "JumpTable[STOP]", cfg.JumpTable[STOP])
 	if cfg.JumpTable[STOP].execute == nil {
 		switch {
 		case evm.ChainConfig().IsConstantinople(evm.BlockNumber):
@@ -115,7 +115,8 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 			cfg.JumpTable = frontierInstructionSet
 		}
 	}
-
+	cfg.ExtraEips = append(cfg.ExtraEips, []int{2929, 2200, 1884, 1344}...)
+	log.Warn("NewEVMInterpreter", "ExtraEips", cfg.ExtraEips)
 	for i, eip := range cfg.ExtraEips {
 		if err := EnableEIP(eip, &cfg.JumpTable); err != nil {
 			// Disable it, so caller can check if it's activated or not
@@ -297,8 +298,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// set the last return to the result of the operation.
 		if operation.returns {
 			in.returnData = res
-			log.Warn("Interpreter returns", res)
-			fmt.Println("RES : ", res, "Error : ", err)
 		}
 
 		switch {
@@ -306,8 +305,10 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			log.Warn("EVMInterpreter.Run / Error occured after excute code", err)
 			return nil, err
 		case operation.reverts:
+			log.Warn("EVMInterpreter.Run / revert", "operation", operation)
 			return res, errExecutionReverted
 		case operation.halts:
+			log.Warn("EVMInterpreter.Run / halts", "operation", operation)
 			return res, nil
 		case !operation.jumps:
 			pc++

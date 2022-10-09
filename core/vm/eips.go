@@ -35,7 +35,9 @@ var activators = map[int]func(*[256]operation){
 // This operation writes in-place, and callers need to ensure that the globally
 // defined jump tables are not polluted.
 func EnableEIP(eipNum int, jt *[256]operation) error {
+	fmt.Println("EnableEIP 호출")
 	enablerFn, ok := activators[eipNum]
+	log.Warn("EnableEIP", "eipNum", eipNum, "Exist", ok)
 	if !ok {
 		return fmt.Errorf("undefined eip %d", eipNum)
 	}
@@ -52,6 +54,7 @@ func ActivateableEips() []string {
 	for k := range activators {
 		nums = append(nums, fmt.Sprintf("%d", k))
 	}
+	log.Warn("ActivateabaleEips", "Nums", nums)
 	sort.Strings(nums)
 	return nums
 }
@@ -74,6 +77,7 @@ func enable1884(jt *[256]operation) {
 		minStack:    minStack(0, 1),
 		maxStack:    maxStack(0, 1),
 	}
+	fmt.Println("enable1884 호출", jt[SELFBALANCE])
 	log.Warn("enable1884", "maxStack", jt[SELFBALANCE].maxStack)
 }
 
@@ -112,6 +116,7 @@ func enable2200(jt *[256]operation) {
 // enable2929 enables "EIP-2929: Gas cost increases for state access opcodes"
 // https://eips.ethereum.org/EIPS/eip-2929
 func enable2929(jt *[256]operation) {
+	log.Warn("Enable2929")
 	jt[SSTORE].dynamicGas = gasSStoreEIP2929
 
 	jt[SLOAD].constantGas = 0

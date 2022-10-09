@@ -1,8 +1,12 @@
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.4;
 
 contract AdditionGame {
 
     constructor() public payable {
+
+    }
+
+    receive() external payable {
 
     }
     
@@ -11,7 +15,7 @@ contract AdditionGame {
     }
  
   
-    function transfer(uint _value) public payable returns (bool) {
+    function transferBrt(uint _value) public payable returns (bool) {
         require(getBalance() >= _value);
         payable(msg.sender).transfer(_value);
         return true;

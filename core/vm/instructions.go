@@ -759,6 +759,7 @@ func opCreate2(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 }
 
 func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
+
 	// Pop gas. The actual gas in interpreter.evm.callGasTemp.
 	interpreter.intPool.put(stack.pop())
 	gas := interpreter.evm.callGasTemp
@@ -769,18 +770,22 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 	// Get the arguments from the memory.
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
 
+	log.Warn("opCall", "toAddr", toAddr, "value", value, "inOffset", inOffset, "inSize", inSize, "retOffset", retOffset, "retSize", retSize, "args", args)
 	if value.Sign() != 0 {
 		gas += params.CallStipend
 	}
 	//[BERITH]
 	ret, returnGas, err := interpreter.evm.Call(contract, toAddr, args, gas, value, types.Main, types.Main)
+	log.Warn("opCall", "ret", ret, "returnGas", returnGas)
 	if err != nil {
+		log.Error("opCall", "Error", err)
 		stack.push(interpreter.intPool.getZero())
 	} else {
 		stack.push(interpreter.intPool.get().SetUint64(1))
 	}
 	if err == nil || err == errExecutionReverted {
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
+		log.Error("opCall", "ErrExcutionReverted", "memory", memory)
 	}
 	contract.Gas += returnGas
 
