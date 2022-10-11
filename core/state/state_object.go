@@ -17,6 +17,7 @@
 package state
 
 import (
+	"berith-chain/log"
 	"bytes"
 	"fmt"
 	"io"
@@ -396,6 +397,7 @@ func (s *stateObject) SetCode(codeHash common.Hash, code []byte) {
 		prevcode: prevcode,
 	})
 	s.setCode(codeHash, code)
+	log.Warn("stateObject.SetCode", "Balance", s.Balance())
 }
 
 func (s *stateObject) setCode(codeHash common.Hash, code []byte) {

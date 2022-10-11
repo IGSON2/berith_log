@@ -82,9 +82,10 @@ func enable1884(jt *[256]operation) {
 }
 
 func opSelfBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	log.Warn("opSelfBalance Called")
 	balance := interpreter.evm.StateDB.GetBalance(contract.Address())
+	fmt.Println("opSelfBalance 호출", "Contract Address = ", contract.Address().Hex(), "Balance = ", balance)
 	stack.push(balance)
+	fmt.Println("opSelfBalance Stack data", stack.data)
 	return nil, nil
 }
 

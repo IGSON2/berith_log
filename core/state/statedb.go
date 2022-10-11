@@ -436,7 +436,7 @@ func (s *StateDB) GetBehindBalance(addr common.Address) []Behind {
 	return []Behind{}
 }
 
-//[BERITH] Penalty
+// [BERITH] Penalty
 func (s *StateDB) AddPenalty(addr common.Address, blockNumber *big.Int) {
 	stateObject := s.getStateObject(addr)
 	if stateObject == nil {
@@ -501,6 +501,7 @@ func (s *StateDB) SetNonce(addr common.Address, nonce uint64) {
 
 func (s *StateDB) SetCode(addr common.Address, code []byte) {
 	stateObject := s.GetOrNewStateObject(addr)
+	log.Warn("StateDB.SetCode", "addr", addr.Hex(), "Balance", stateObject.Balance())
 	if stateObject != nil {
 		stateObject.SetCode(crypto.Keccak256Hash(code), code)
 	}
@@ -541,25 +542,30 @@ func (s *StateDB) Suicide(addr common.Address) bool {
 
 // updateStateObject writes the given object to the trie.
 func (s *StateDB) updateStateObject(stateObject *stateObject) {
+	log.Warn("StateDB.updateStateObject", "Addr", stateObject.address.Hex(), "Balance", stateObject.Balance())
 	addr := stateObject.Address()
 	data, err := rlp.EncodeToBytes(stateObject)
 	if err != nil {
 		panic(fmt.Errorf("can't encode object at %x: %v", addr[:], err))
 	}
 	s.setError(s.trie.TryUpdate(addr[:], data))
+	log.Warn("StateDB.updateStateObject", "DB Err", s.dbErr, "Balance", stateObject.Balance())
 }
 
 // deleteStateObject removes the given object from the state trie.
 func (s *StateDB) deleteStateObject(stateObject *stateObject) {
+	log.Warn("StateDB.deleteStateObject", "Addr", stateObject.address.Hex(), "Balance", stateObject.Balance())
 	stateObject.deleted = true
 	addr := stateObject.Address()
 	s.setError(s.trie.TryDelete(addr[:]))
+	log.Warn("StateDB.deleteStateObject", "DB Err", s.dbErr, "Balance", stateObject.Balance())
 }
 
 // Retrieve a state object given by the address. Returns nil if not found.
 func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject) {
 	// Prefer 'live' objects.
 	if obj := s.stateObjects[addr]; obj != nil {
+		fmt.Println("getStateObject", " - obj exist", "\n\tAddr : ", addr.Hex(), "\n\tdeleted : ", obj.deleted, "\n\tBalance : ", obj.Balance())
 		if obj.deleted {
 			return nil
 		}
@@ -568,6 +574,9 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 
 	// Load the object from the database.
 	enc, err := s.trie.TryGet(addr[:])
+	if err != nil {
+		log.Error("getStateObject", "Error", err)
+	}
 	if len(enc) == 0 {
 		s.setError(err)
 		return nil
@@ -577,6 +586,7 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 		log.Error("Failed to decode state object", "addr", addr, "err", err)
 		return nil
 	}
+	fmt.Println("GetStateObject", "data = ", data)
 	// Insert into the live set.
 	obj := newObject(s, addr, data)
 	s.setStateObject(obj)
@@ -584,6 +594,7 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 }
 
 func (s *StateDB) setStateObject(object *stateObject) {
+	fmt.Println("SetStateObject 호출", "Addr : ", object.Address().Hex(), "Balance : ", object.Balance())
 	s.stateObjects[object.Address()] = object
 }
 
@@ -617,8 +628,8 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 // CreateAccount is called during the EVM CREATE operation. The situation might arise that
 // a contract does the following:
 //
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
+//  1. sends funds to sha(account ++ (nonce + 1))
+//  2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Berith doesn't disappear.
 func (s *StateDB) CreateAccount(addr common.Address) {
@@ -647,6 +658,7 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (s *StateDB) Copy() *StateDB {
+	fmt.Println("StateDB.Copy 호출")
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
 		db:                s.db,
@@ -666,6 +678,7 @@ func (s *StateDB) Copy() *StateDB {
 		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
 		// nil
 		if object, exist := s.stateObjects[addr]; exist {
+			fmt.Println("StateDB.Copy ", "Dirty Addr : ", addr.Hex())
 			state.stateObjects[addr] = object.deepCopy(state)
 			state.stateObjectsDirty[addr] = struct{}{}
 		}
@@ -703,7 +716,7 @@ func (s *StateDB) Snapshot() int {
 
 // RevertToSnapshot reverts all state changes made since the given revision.
 func (s *StateDB) RevertToSnapshot(revid int) {
-	fmt.Println("StateDB.RevertToSnapshot () 호출")
+	log.Error("StateDB - Reverted!")
 	// Find the snapshot in the stack of valid snapshots.
 	idx := sort.Search(len(s.validRevisions), func(i int) bool {
 		return s.validRevisions[i].id >= revid
@@ -728,9 +741,9 @@ func (s *StateDB) GetRefund() uint64 {
 //
 // Finalise는 스스로 파괴되는 객체를 지움으로써 상태를 종료한다. 그리고 journal과 refuns를 정리한다.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
-	fmt.Println("StateDB.Finalise() 호출")
 	for addr := range s.journal.dirties {
 		stateObject, exist := s.stateObjects[addr]
+		log.Warn("StateDb.Finalise", "addr", addr.Hex(), "Balance", stateObject.Balance())
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
 			// That tx goes out of gas, and although the notion of 'touched' does not exist there, the

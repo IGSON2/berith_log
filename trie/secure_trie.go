@@ -77,7 +77,10 @@ func (t *SecureTrie) Get(key []byte) []byte {
 // The value bytes must not be modified by the caller.
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *SecureTrie) TryGet(key []byte) ([]byte, error) {
-	return t.trie.TryGet(t.hashKey(key))
+	res, err := t.trie.TryGet(t.hashKey(key))
+	fmt.Println("odrTrie 호출", "Hash", common.BytesToHash(res))
+
+	return res, err
 }
 
 // Update associates key with value in the trie. Subsequent calls to
