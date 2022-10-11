@@ -17,23 +17,8 @@
 package vm
 
 import (
-	"fmt"
-
 	"github.com/BerithFoundation/berith-chain/params"
 )
-
-func makeStackFunc(pop, push int) stackValidationFunc {
-	return func(stack *Stack) error {
-		if err := stack.require(pop); err != nil {
-			return err
-		}
-
-		if stack.len()+push-pop > int(params.StackLimit) {
-			return fmt.Errorf("stack limit reached %d (%d)", stack.len(), params.StackLimit)
-		}
-		return nil
-	}
-}
 
 func minSwapStack(n int) int {
 	return minStack(n, n)

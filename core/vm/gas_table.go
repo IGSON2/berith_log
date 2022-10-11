@@ -76,7 +76,7 @@ func gasCallDataCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *St
 		return 0, errGasUintOverflow
 	}
 
-	words, overflow := bigUint64(stack.Back(2))
+	words, overflow := bigUint64(stack.Back(2).ToBig())
 	if overflow {
 		return 0, errGasUintOverflow
 	}
@@ -102,7 +102,7 @@ func gasReturnDataCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *
 		return 0, errGasUintOverflow
 	}
 
-	words, overflow := bigUint64(stack.Back(2))
+	words, overflow := bigUint64(stack.Back(2).ToBig())
 	if overflow {
 		return 0, errGasUintOverflow
 	}
@@ -120,7 +120,7 @@ func gasReturnDataCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *
 func gasSStore(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	var (
 		y, x    = stack.Back(1), stack.Back(0)
-		current = evm.StateDB.GetState(contract.Address(), common.BigToHash(x))
+		current = evm.StateDB.GetState(contract.Address(), common.BigToHash(x.ToBig()))
 	)
 	// The legacy gas metering only takes into consideration the current state
 	if !evm.chainRules.IsConstantinople {
@@ -153,11 +153,11 @@ func gasSStore(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 	// 	  2.2.2. If original value equals new value (this storage slot is reset)
 	//       2.2.2.1. If original value is 0, add 19800 gas to refund counter.
 	// 	     2.2.2.2. Otherwise, add 4800 gas to refund counter.
-	value := common.BigToHash(y)
+	value := common.BigToHash(y.ToBig())
 	if current == value { // noop (1)
 		return params.NetSstoreNoopGas, nil
 	}
-	original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToHash(x))
+	original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToHash(x.ToBig()))
 	if original == current {
 		if original == (common.Hash{}) { // create slot (2.1.1)
 			return params.NetSstoreInitGas, nil
@@ -241,7 +241,7 @@ func gasSStoreEIP2200(gt params.GasTable, evm *EVM, contract *Contract, stack *S
 
 func makeGasLog(n uint64) gasFunc {
 	return func(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
-		requestedSize, overflow := bigUint64(stack.Back(1))
+		requestedSize, overflow := bigUint64(stack.Back(1).ToBig())
 		if overflow {
 			return 0, errGasUintOverflow
 		}
@@ -280,7 +280,7 @@ func gasSha3(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 		return 0, errGasUintOverflow
 	}
 
-	wordGas, overflow := bigUint64(stack.Back(1))
+	wordGas, overflow := bigUint64(stack.Back(1).ToBig())
 	if overflow {
 		return 0, errGasUintOverflow
 	}
@@ -304,7 +304,7 @@ func gasCodeCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack,
 		return 0, errGasUintOverflow
 	}
 
-	wordGas, overflow := bigUint64(stack.Back(2))
+	wordGas, overflow := bigUint64(stack.Back(2).ToBig())
 	if overflow {
 		return 0, errGasUintOverflow
 	}
@@ -328,7 +328,7 @@ func gasExtCodeCopy(gt params.GasTable, evm *EVM, contract *Contract, stack *Sta
 		return 0, errGasUintOverflow
 	}
 
-	wordGas, overflow := bigUint64(stack.Back(3))
+	wordGas, overflow := bigUint64(stack.Back(3).ToBig())
 	if overflow {
 		return 0, errGasUintOverflow
 	}
@@ -404,7 +404,7 @@ func gasCreate2(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, 
 	if gas, overflow = math.SafeAdd(gas, params.Create2Gas); overflow {
 		return 0, errGasUintOverflow
 	}
-	wordGas, overflow := bigUint64(stack.Back(2))
+	wordGas, overflow := bigUint64(stack.Back(2).ToBig())
 	if overflow {
 		return 0, errGasUintOverflow
 	}
@@ -447,7 +447,7 @@ func gasCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 	var (
 		gas            = gt.Calls
 		transfersValue = stack.Back(2).Sign() != 0
-		address        = common.BigToAddress(stack.Back(1))
+		address        = common.BigToAddress(stack.Back(1).ToBig())
 		eip158         = evm.ChainConfig().IsEIP158(evm.BlockNumber)
 	)
 	if eip158 {
@@ -469,7 +469,7 @@ func gasCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, mem
 		return 0, errGasUintOverflow
 	}
 
-	evm.callGasTemp, err = callGas(gt, contract.Gas, gas, stack.Back(0))
+	evm.callGasTemp, err = callGas(gt, contract.Gas, gas, stack.Back(0).ToBig())
 	if err != nil {
 		return 0, err
 	}
@@ -493,7 +493,7 @@ func gasCallCode(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack,
 		return 0, errGasUintOverflow
 	}
 
-	evm.callGasTemp, err = callGas(gt, contract.Gas, gas, stack.Back(0))
+	evm.callGasTemp, err = callGas(gt, contract.Gas, gas, stack.Back(0).ToBig())
 	if err != nil {
 		return 0, err
 	}
@@ -517,7 +517,7 @@ func gasSuicide(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, 
 	if evm.ChainConfig().IsEIP150(evm.BlockNumber) {
 		gas = gt.Suicide
 		var (
-			address = common.BigToAddress(stack.Back(0))
+			address = common.BigToAddress(stack.Back(0).ToBig())
 			eip158  = evm.ChainConfig().IsEIP158(evm.BlockNumber)
 		)
 
@@ -547,7 +547,7 @@ func gasDelegateCall(gt params.GasTable, evm *EVM, contract *Contract, stack *St
 		return 0, errGasUintOverflow
 	}
 
-	evm.callGasTemp, err = callGas(gt, contract.Gas, gas, stack.Back(0))
+	evm.callGasTemp, err = callGas(gt, contract.Gas, gas, stack.Back(0).ToBig())
 	if err != nil {
 		return 0, err
 	}
@@ -567,7 +567,7 @@ func gasStaticCall(gt params.GasTable, evm *EVM, contract *Contract, stack *Stac
 		return 0, errGasUintOverflow
 	}
 
-	evm.callGasTemp, err = callGas(gt, contract.Gas, gas, stack.Back(0))
+	evm.callGasTemp, err = callGas(gt, contract.Gas, gas, stack.Back(0).ToBig())
 	if err != nil {
 		return 0, err
 	}

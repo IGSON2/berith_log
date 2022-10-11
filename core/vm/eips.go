@@ -22,6 +22,7 @@ import (
 	"sort"
 
 	"github.com/BerithFoundation/berith-chain/params"
+	"github.com/holiman/uint256"
 )
 
 var activators = map[int]func(*[256]operation){
@@ -82,7 +83,7 @@ func enable1884(jt *[256]operation) {
 }
 
 func opSelfBalance(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	balance := interpreter.evm.StateDB.GetBalance(contract.Address())
+	balance, _ := uint256.FromBig(interpreter.evm.StateDB.GetBalance(contract.Address()))
 	fmt.Println("opSelfBalance 호출", "Contract Address = ", contract.Address().Hex(), "Balance = ", balance)
 	stack.push(balance)
 	fmt.Println("opSelfBalance Stack data", stack.data)
@@ -103,7 +104,7 @@ func enable1344(jt *[256]operation) {
 
 // opChainID implements CHAINID opcode
 func opChainID(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	chainId := interpreter.evm.chainConfig.ChainID
+	chainId, _ := uint256.FromBig(interpreter.evm.chainConfig.ChainID)
 	stack.push(chainId)
 	return nil, nil
 }

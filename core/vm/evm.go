@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sync/atomic"
@@ -73,7 +74,7 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 			log.Error("Cannot run contract code", "Contract", contract.CodeAddr.Hex())
 		}
 	}
-	return nil, ErrNoCompatibleInterpreter
+	return nil, errors.New("no compatible interpreter")
 }
 
 // Context provides the EVM with auxiliary information. Once provided

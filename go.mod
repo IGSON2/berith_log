@@ -3,7 +3,7 @@ module berith-chain
 go 1.14
 
 require (
-	github.com/Azure/azure-storage-blob-go v0.0.0-20180712005634-eaae161d9d5e
+	github.com/Azure/azure-storage-blob-go v0.7.0
 	github.com/BerithFoundation/berith-chain v0.0.0-00010101000000-000000000000
 	github.com/alexmullins/zip v0.0.0-20180717182244-4affb64b04d0
 	github.com/allegro/bigcache v1.2.1
@@ -31,9 +31,13 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/karalabe/hid v1.0.0
+	github.com/maruel/panicparse v1.6.2 // indirect
 	github.com/mattn/go-colorable v0.1.7
 	github.com/mattn/go-isatty v0.0.12
+	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
+	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
+	github.com/nsf/termbox-go v1.1.1 // indirect
 	github.com/pborman/uuid v1.2.0
 	github.com/peterh/liner v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -44,9 +48,9 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.0
 	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2
-	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+	golang.org/x/net v0.0.0-20221004154528-8021a29435af
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+	golang.org/x/sys v0.0.0-20221010170243-090e33056c14
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6

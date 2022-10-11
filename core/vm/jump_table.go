@@ -18,7 +18,6 @@ package vm
 
 import (
 	"errors"
-	"math/big"
 
 	"github.com/BerithFoundation/berith-chain/params"
 )
@@ -27,7 +26,7 @@ type (
 	executionFunc       func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error)
 	gasFunc             func(params.GasTable, *EVM, *Contract, *Stack, *Memory, uint64) (uint64, error) // last parameter is the requested memory size as a uint64
 	stackValidationFunc func(*Stack) error
-	memorySizeFunc      func(*Stack) *big.Int
+	memorySizeFunc      func(*Stack) (size uint64, overflow bool)
 )
 
 var errGasUintOverflow = errors.New("gas uint64 overflow")

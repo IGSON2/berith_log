@@ -88,8 +88,6 @@ type EVMInterpreter struct {
 	cfg      Config
 	gasTable params.GasTable
 
-	intPool *intPool
-
 	hasher    keccakState // Keccak256 hasher instance shared across opcodes
 	hasherBuf common.Hash // Keccak256 hasher result array shared aross opcodes
 
@@ -156,13 +154,6 @@ func (in *EVMInterpreter) enforceRestrictions(op OpCode, operation operation, st
 // errExecutionReverted which means revert-and-keep-gas-left.
 func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
 	log.Warn("EVMInterpreter.Run 호출")
-	if in.intPool == nil {
-		in.intPool = poolOfIntPools.get()
-		defer func() {
-			poolOfIntPools.put(in.intPool)
-			in.intPool = nil
-		}()
-	}
 
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
@@ -199,10 +190,13 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		gasCopy uint64 // for Tracer to log gas remaining before execution
 		logged  bool   // deferred Tracer should ignore already logged steps
 	)
+	// Don't move this deferrred function, it's placed before the capturestate-deferred method,
+	// so that it get's executed _after_: the capturestate needs the stacks before
+	// they are returned to the pools
+	defer func() {
+		returnStack(stack)
+	}()
 	contract.Input = input
-
-	// Reclaim the stack as an int pool when the execution stops
-	defer func() { in.intPool.put(stack.data...) }()
 
 	if in.cfg.Debug {
 		defer func() {
@@ -254,7 +248,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// calculate the new memory size and expand the memory to fit
 		// the operation
 		if operation.memorySize != nil {
-			memSize, overflow := bigUint64(operation.memorySize(stack))
+			memSize, overflow := operation.memorySize(stack)
 			if overflow {
 				log.Error("Overflow !")
 				return nil, errGasUintOverflow
@@ -289,11 +283,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 
 		// execute the operation
 		res, err := operation.execute(&pc, in, contract, mem, stack)
-		// verifyPool is a build flag. Pool verification makes sure the integrity
-		// of the integer pool by comparing values to a default value.
-		if verifyPool {
-			verifyIntegerPool(in.intPool)
-		}
+
 		// if the operation clears the return data (e.g. it has returning data)
 		// set the last return to the result of the operation.
 		if operation.returns {
