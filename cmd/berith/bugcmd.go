@@ -55,7 +55,7 @@ func reportBug(ctx *cli.Context) error {
 	fmt.Fprintln(&buff, "Go Version:", runtime.Version())
 	fmt.Fprintln(&buff, "OS:", runtime.GOOS)
 	printOSDetails(&buff)
-	fmt.Fprintln(&buff, header)
+	fmt.Fprint(&buff, header)
 
 	// open a new GH issue
 	if !browser.Open(issueURL + "?body=" + url.QueryEscape(buff.String())) {

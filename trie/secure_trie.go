@@ -78,7 +78,6 @@ func (t *SecureTrie) Get(key []byte) []byte {
 // If a node was not found in the database, a MissingNodeError is returned.
 func (t *SecureTrie) TryGet(key []byte) ([]byte, error) {
 	res, err := t.trie.TryGet(t.hashKey(key))
-	fmt.Println("odrTrie 호출", "Hash", common.BytesToHash(res))
 
 	return res, err
 }
