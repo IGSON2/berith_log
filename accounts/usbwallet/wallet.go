@@ -136,7 +136,6 @@ func (w *wallet) Status() (string, error) {
 // Open implements accounts.Wallet, attempting to open a USB connection to the
 // hardware wallet.
 func (w *wallet) Open(passphrase string) error {
-	fmt.Println("usbwallet.go 139 / wallet.Open() 호출")
 	w.stateLock.Lock() // State lock is enough since there's no connection yet at this point
 	defer w.stateLock.Unlock()
 

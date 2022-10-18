@@ -377,7 +377,6 @@ func (s *Berith) SetBerithbase(base common.Address) {
 // is already running, this method adjust the number of threads allowed to use
 // and updates the minimum price required by the transaction pool.
 func (s *Berith) StartMining(threads int) error {
-	fmt.Println("StartMining() 호출")
 	// Update the thread count within the consensus engine
 	type threaded interface {
 		SetThreads(threads int)
@@ -461,7 +460,6 @@ func (s *Berith) Protocols() []p2p.Protocol {
 // Start implements node.Service, starting all internals goroutines needed by the
 // Berith protocol implementation.
 func (s *Berith) Start(srvr *p2p.Server) error {
-	fmt.Println("Berith.Start() 호출")
 
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers(params.BloomBitsBlocks)

@@ -520,7 +520,6 @@ func (s *StateDB) SetState(addr common.Address, key, value common.Hash) {
 // The account's state object is still available until the state is committed,
 // getStateObject will return a non-nil account after Suicide.
 func (s *StateDB) Suicide(addr common.Address) bool {
-	fmt.Println("StateDB.Suicide() 호출")
 	stateObject := s.getStateObject(addr)
 	if stateObject == nil {
 		return false
@@ -565,7 +564,6 @@ func (s *StateDB) deleteStateObject(stateObject *stateObject) {
 func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject) {
 	// Prefer 'live' objects.
 	if obj := s.stateObjects[addr]; obj != nil {
-		fmt.Println("getStateObject", " - obj exist", "\n\tAddr : ", addr.Hex(), "\n\tdeleted : ", obj.deleted, "\n\tBalance : ", obj.Balance())
 		if obj.deleted {
 			return nil
 		}
@@ -586,7 +584,6 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 		log.Error("Failed to decode state object", "addr", addr, "err", err)
 		return nil
 	}
-	fmt.Println("GetStateObject", "data = ", data)
 	// Insert into the live set.
 	obj := newObject(s, addr, data)
 	s.setStateObject(obj)
@@ -594,7 +591,6 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 }
 
 func (s *StateDB) setStateObject(object *stateObject) {
-	fmt.Println("SetStateObject 호출", "Addr : ", object.Address().Hex(), "Balance : ", object.Balance())
 	s.stateObjects[object.Address()] = object
 }
 
@@ -658,7 +654,6 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (s *StateDB) Copy() *StateDB {
-	fmt.Println("StateDB.Copy 호출")
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
 		db:                s.db,
@@ -678,7 +673,6 @@ func (s *StateDB) Copy() *StateDB {
 		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
 		// nil
 		if object, exist := s.stateObjects[addr]; exist {
-			fmt.Println("StateDB.Copy ", "Dirty Addr : ", addr.Hex())
 			state.stateObjects[addr] = object.deepCopy(state)
 			state.stateObjectsDirty[addr] = struct{}{}
 		}
@@ -780,7 +774,6 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 // Prepare는 EVM이 새 상태 로그를 내보낼 때 사용되는 현재 트랜잭션 해시 및
 // 인덱스 및 블록 해시를 설정합니다.
 func (s *StateDB) Prepare(thash, bhash common.Hash, ti int) {
-	fmt.Println("StateDB.Prepare() 호출")
 	s.thash = thash
 	s.bhash = bhash
 	s.txIndex = ti
@@ -795,7 +788,6 @@ func (s *StateDB) clearJournalAndRefund() {
 // Commit writes the state to the underlying in-memory trie database.
 // Commit는 state를 메모리 내부에있는 트리 데이터베이스에 기록한다.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) {
-	fmt.Println("StateDB.Commit() 호출")
 	defer s.clearJournalAndRefund()
 
 	for addr := range s.journal.dirties {

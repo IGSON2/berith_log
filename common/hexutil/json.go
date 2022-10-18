@@ -91,6 +91,7 @@ func UnmarshalFixedText(typname string, input, out []byte) error {
 		return err
 	}
 	if len(raw)/2 != len(out) {
+		fmt.Println("raw stirng", string(raw))
 		return fmt.Errorf("hex string has length %d, want %d for %s", len(raw), len(out)*2, typname)
 	}
 	// Pre-verify syntax before modifying out.

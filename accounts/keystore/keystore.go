@@ -121,7 +121,6 @@ func (ks *KeyStore) init(keydir string) {
 func (ks *KeyStore) Wallets() []accounts.Wallet {
 	// Make sure the list of wallets is in sync with the account cache
 	ks.refreshWallets()
-	fmt.Println("keystore.refreshWallets() 호출")
 
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
@@ -179,7 +178,6 @@ func (ks *KeyStore) refreshWallets() {
 // Subscribe implements accounts.Backend, creating an async subscription to
 // receive notifications on the addition or removal of keystore wallets.
 func (ks *KeyStore) Subscribe(sink chan<- accounts.WalletEvent) event.Subscription {
-	fmt.Println("KeyStore.Subscribe() 호출")
 	// We need the mutex to reliably start/stop the update loop
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
@@ -381,7 +379,7 @@ func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
 	return a, err
 }
 
-//Public Key to Private Key
+// Public Key to Private Key
 func (ks *KeyStore) GetPrivateKey(address string, auth string) (string, error) {
 	addr := common.HexToAddress(address)
 	path := ks.storage.JoinPath(keyFileName(addr))

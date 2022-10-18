@@ -18,7 +18,6 @@ package usbwallet
 
 import (
 	"errors"
-	"fmt"
 	"runtime"
 	"sync"
 	"time"
@@ -106,7 +105,6 @@ func newHub(scheme string, vendorID uint16, productIDs []uint16, usageID uint16,
 func (hub *Hub) Wallets() []accounts.Wallet {
 	// Make sure the list of wallets is up to date
 	hub.refreshWallets()
-	fmt.Println("refreshWallets() 호출")
 
 	hub.stateLock.RLock()
 	defer hub.stateLock.RUnlock()
@@ -210,7 +208,6 @@ func (hub *Hub) refreshWallets() {
 // Subscribe implements accounts.Backend, creating an async subscription to
 // receive notifications on the addition or removal of USB wallets.
 func (hub *Hub) Subscribe(sink chan<- accounts.WalletEvent) event.Subscription {
-	fmt.Println("usbwallet.go 204 - Subscribe() 호출")
 	// We need the mutex to reliably start/stop the update loop
 	hub.stateLock.Lock()
 	defer hub.stateLock.Unlock()

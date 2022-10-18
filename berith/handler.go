@@ -102,7 +102,6 @@ type ProtocolManager struct {
 }
 
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkID uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb berithdb.Database, whitelist map[uint64]common.Hash) (*ProtocolManager, error) {
-	fmt.Println("NewProtocolManager() 호출")
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkID:   networkID,
@@ -143,7 +142,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 				peer := manager.newPeer(int(version), p, rw)
 				select {
 				case manager.newPeerCh <- peer:
-					// fmt.Println("ProtocolManager.SubProtocol.Run() 호출, peer : ", p.Info().Enode)
 					manager.wg.Add(1)
 					defer manager.wg.Done()
 					return manager.handle(peer)
@@ -208,7 +206,6 @@ func (pm *ProtocolManager) removePeer(id string) {
 }
 
 func (pm *ProtocolManager) Start(maxPeers int) {
-	fmt.Println("ProtocolManager.Start() 호출")
 	pm.maxPeers = maxPeers
 
 	// broadcast transactions
@@ -257,7 +254,6 @@ func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *p
 // handle is the callback invoked to manage the life cycle of an berith peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p *peer) error {
-	// fmt.Println("ProtocolManager.handler() 호출")
 	// Ignore maxPeers if this is a trusted peer
 	if pm.peers.Len() >= pm.maxPeers && !p.Peer.Info().Network.Trusted {
 		return p2p.DiscTooManyPeers
@@ -348,7 +344,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 	// Block header query, collect the requested headers and reply
 	case msg.Code == GetBlockHeadersMsg:
-		fmt.Println("ProtocolManager.handleMsg() - GetBlockHeadersMSG")
 		// Decode the complex header query
 		var query getBlockHeadersData
 		if err := msg.Decode(&query); err != nil {
@@ -436,7 +431,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return p.SendBlockHeaders(headers)
 
 	case msg.Code == BlockHeadersMsg:
-		fmt.Println("ProtocolManager.handleMsg() - BlockHeadersMSG")
 		// A batch of headers arrived to one of our previous requests
 		var headers []*types.Header
 		if err := msg.Decode(&headers); err != nil {
@@ -498,7 +492,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == GetBlockBodiesMsg:
-		fmt.Println("ProtocolManager.handleMsg() - GetBlockBodiesMsg")
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 		if _, err := msgStream.List(); err != nil {
@@ -526,7 +519,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return p.SendBlockBodiesRLP(bodies)
 
 	case msg.Code == BlockBodiesMsg:
-		fmt.Println("ProtocolManager.handleMsg() - BlockBodiesMsg")
 		// A batch of block bodies arrived to one of our previous requests
 		var request blockBodiesData
 		if err := msg.Decode(&request); err != nil {
@@ -553,7 +545,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case p.version >= ber63 && msg.Code == GetNodeDataMsg:
-		fmt.Println("ProtocolManager.handleMsg() - GetNodeDataMsg")
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 		if _, err := msgStream.List(); err != nil {
@@ -581,7 +572,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return p.SendNodeData(data)
 
 	case p.version >= ber63 && msg.Code == NodeDataMsg:
-		fmt.Println("ProtocolManager.handleMsg() - NodeDataMsg")
 		// A batch of node state data arrived to one of our previous requests
 		var data [][]byte
 		if err := msg.Decode(&data); err != nil {
@@ -593,7 +583,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case p.version >= ber63 && msg.Code == GetReceiptsMsg:
-		fmt.Println("ProtocolManager.handleMsg() - GetReceiptsMsg")
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 		if _, err := msgStream.List(); err != nil {
@@ -630,7 +619,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		return p.SendReceiptsRLP(receipts)
 
 	case p.version >= ber63 && msg.Code == ReceiptsMsg:
-		fmt.Println("ProtocolManager.handleMsg() - ReceiptsMsg")
 		// A batch of receipts arrived to one of our previous requests
 		var receipts [][]*types.Receipt
 		if err := msg.Decode(&receipts); err != nil {
@@ -642,7 +630,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == NewBlockHashesMsg:
-		fmt.Println("ProtocolManager.handleMsg() - NewBlockHashesMsg")
 		var announces newBlockHashesData
 		if err := msg.Decode(&announces); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -663,7 +650,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == NewBlockMsg:
-		fmt.Println("ProtocolManager.handleMsg() - NewBlockMsg")
 		// Retrieve and decode the propagated block
 		var request newBlockData
 		if err := msg.Decode(&request); err != nil {
@@ -696,7 +682,6 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		}
 
 	case msg.Code == TxMsg:
-		fmt.Println("ProtocolManager.handleMsg() - TxMsg")
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 			break

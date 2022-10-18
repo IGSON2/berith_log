@@ -18,11 +18,9 @@ package vm
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/BerithFoundation/berith-chain/common"
-	"github.com/BerithFoundation/berith-chain/common/math"
 	"github.com/BerithFoundation/berith-chain/core/types"
 	"github.com/BerithFoundation/berith-chain/params"
 	"github.com/holiman/uint256"
@@ -30,12 +28,10 @@ import (
 )
 
 var (
-	bigZero                  = new(big.Int)
-	tt255                    = math.BigPow(2, 255)
-	errWriteProtection       = errors.New("evm: write protection")
-	errReturnDataOutOfBounds = errors.New("evm: return data out of bounds")
-	errExecutionReverted     = errors.New("evm: execution reverted")
-	errMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
+	bigZero                = new(big.Int)
+	errWriteProtection     = errors.New("evm: write protection")
+	errExecutionReverted   = errors.New("evm: execution reverted")
+	errMaxCodeSizeExceeded = errors.New("evm: max code size exceeded")
 )
 
 func opAdd(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
@@ -286,7 +282,6 @@ func opOrigin(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memor
 }
 func opCaller(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	stack.push(new(uint256.Int).SetBytes(contract.Caller().Bytes()))
-	fmt.Println("opCaller - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()), "\n\tData : ", stack.data)
 	return nil, nil
 }
 
@@ -551,7 +546,6 @@ func opJump(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory 
 		return nil, ErrInvalidJump
 	}
 	*pc = pos.Uint64()
-	fmt.Println("opJump - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()), "\n\tData : ", stack.data)
 
 	return nil, nil
 }
@@ -566,13 +560,11 @@ func opJumpi(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory
 	} else {
 		*pc++
 	}
-	fmt.Println("opJumpi - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()), "\n\tData : ", stack.data)
 
 	return nil, nil
 }
 
 func opJumpdest(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	fmt.Println("opJumpdest - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()), "\n\tData : ", stack.data)
 	return nil, nil
 }
 
@@ -853,7 +845,6 @@ func opPush1(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory
 	} else {
 		stack.push(integer.Clear())
 	}
-	fmt.Println("opPush1 - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()))
 
 	return nil, nil
 }
@@ -861,7 +852,6 @@ func opPush1(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory
 // make push instruction function
 func makePush(size uint64, pushByteSize int) executionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-		fmt.Println("makePush Before(", size, ") - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()), "\n\tData : ", stack.data)
 		codeLen := len(contract.Code)
 
 		startMin := codeLen
@@ -877,7 +867,6 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 		integer := new(uint256.Int)
 		stack.push(integer.SetBytes(common.RightPadBytes(
 			contract.Code[startMin:endMin], pushByteSize)))
-		fmt.Println("makePush(", size, ") - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()), "\n\tCodeLen : ", codeLen, "\n\tData : ", stack.data)
 		*pc += size
 		return nil, nil
 	}
@@ -887,7 +876,6 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 func makeDup(size int64) executionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 		stack.dup(int(size))
-		fmt.Println("makeDup(", size, ") - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()))
 		return nil, nil
 	}
 }
@@ -898,7 +886,6 @@ func makeSwap(size int64) executionFunc {
 	size++
 	return func(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 		stack.swap(int(size))
-		fmt.Println("makeSwap(", size, ") - Addr : ", contract.Address().Hex(), "\n\tBalance : ", interpreter.evm.StateDB.GetBalance(contract.Address()))
 		return nil, nil
 	}
 }

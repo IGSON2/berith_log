@@ -222,7 +222,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
-		fmt.Println("Compiling..\t", "op=", op, "[", int(op), "]")
+		// fmt.Println("Compiling..\t", "op=", op, "[", int(op), "]")
 
 		operation := in.cfg.JumpTable[op]
 		if &operation == nil {
