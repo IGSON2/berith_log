@@ -91,7 +91,6 @@ func UnmarshalFixedText(typname string, input, out []byte) error {
 		return err
 	}
 	if len(raw)/2 != len(out) {
-		fmt.Println("raw stirng", string(raw))
 		return fmt.Errorf("hex string has length %d, want %d for %s", len(raw), len(out)*2, typname)
 	}
 	// Pre-verify syntax before modifying out.
@@ -274,15 +273,18 @@ func isString(input []byte) bool {
 	return len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"'
 }
 
-func bytesHave0xPrefix(input []byte) bool {
-	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+// [Berith]
+// User의 Address prefix는 Bx이지만
+// Transaction hash prefix는 0x인 관계로 둘 다 허용
+func bytesHave0xBxPrefix(input []byte) bool {
+	return len(input) >= 2 && (input[0] == '0' || input[0] == 'b' || input[0] == 'B') && (input[1] == 'x' || input[1] == 'X')
 }
 
 func checkText(input []byte, wantPrefix bool) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, nil // empty strings are allowed
 	}
-	if bytesHave0xPrefix(input) {
+	if bytesHave0xBxPrefix(input) {
 		input = input[2:]
 	} else if wantPrefix {
 		return nil, ErrMissingPrefix
@@ -297,7 +299,7 @@ func checkNumberText(input []byte) (raw []byte, err error) {
 	if len(input) == 0 {
 		return nil, nil // empty strings are allowed
 	}
-	if !bytesHave0xPrefix(input) {
+	if !bytesHave0xBxPrefix(input) {
 		return nil, ErrMissingPrefix
 	}
 	input = input[2:]
