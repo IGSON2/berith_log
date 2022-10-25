@@ -47,6 +47,9 @@ type Config struct {
 	EWASMInterpreter string
 	// Type of the EVM interpreter
 	EVMInterpreter string
+
+	ExtraEips []int // Additional EIPS that are to be enabled
+
 }
 
 // Interpreter is used to run Berith based contracts and will utilise the
@@ -85,8 +88,6 @@ type EVMInterpreter struct {
 	cfg      Config
 	gasTable params.GasTable
 
-	intPool *intPool
-
 	hasher    keccakState // Keccak256 hasher instance shared across opcodes
 	hasherBuf common.Hash // Keccak256 hasher result array shared aross opcodes
 
@@ -99,7 +100,8 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
-	if !cfg.JumpTable[STOP].valid {
+	log.Warn("NewEVMInterpreter", "JumpTable[STOP]", cfg.JumpTable[STOP])
+	if cfg.JumpTable[STOP].execute == nil {
 		switch {
 		case evm.ChainConfig().IsConstantinople(evm.BlockNumber):
 			cfg.JumpTable = constantinopleInstructionSet
@@ -109,6 +111,15 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 			cfg.JumpTable = homesteadInstructionSet
 		default:
 			cfg.JumpTable = frontierInstructionSet
+		}
+	}
+	cfg.ExtraEips = append(cfg.ExtraEips, []int{2929, 2200, 1884, 1344}...)
+	log.Warn("NewEVMInterpreter", "ExtraEips", cfg.ExtraEips)
+	for i, eip := range cfg.ExtraEips {
+		if err := EnableEIP(eip, &cfg.JumpTable); err != nil {
+			// Disable it, so caller can check if it's activated or not
+			cfg.ExtraEips = append(cfg.ExtraEips[:i], cfg.ExtraEips[i+1:]...)
+			log.Error("EIP activation failed", "eip", eip, "error", err)
 		}
 	}
 
@@ -143,13 +154,6 @@ func (in *EVMInterpreter) enforceRestrictions(op OpCode, operation operation, st
 // errExecutionReverted which means revert-and-keep-gas-left.
 func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
 	log.Warn("EVMInterpreter.Run 호출")
-	if in.intPool == nil {
-		in.intPool = poolOfIntPools.get()
-		defer func() {
-			poolOfIntPools.put(in.intPool)
-			in.intPool = nil
-		}()
-	}
 
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
@@ -186,10 +190,13 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		gasCopy uint64 // for Tracer to log gas remaining before execution
 		logged  bool   // deferred Tracer should ignore already logged steps
 	)
+	// Don't move this deferrred function, it's placed before the capturestate-deferred method,
+	// so that it get's executed _after_: the capturestate needs the stacks before
+	// they are returned to the pools
+	defer func() {
+		returnStack(stack)
+	}()
 	contract.Input = input
-
-	// Reclaim the stack as an int pool when the execution stops
-	defer func() { in.intPool.put(stack.data...) }()
 
 	if in.cfg.Debug {
 		defer func() {
@@ -215,17 +222,19 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
-		fmt.Println("Compiling..\t", "op=", op, "[", int(op), "]")
-		if op == RETURN {
-			log.Warn("RETURN OP", "CodeByte", contract.Code)
-		}
+		// fmt.Println("Compiling..\t", "op=", op, "[", int(op), "]")
+
 		operation := in.cfg.JumpTable[op]
-		if !operation.valid {
+		if &operation == nil {
 			log.Error("EVMInterpreter.Run / Invalid op error ", "error", err, "CodeByte", contract.Code)
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
 		}
-		if err := operation.validateStack(stack); err != nil {
-			log.Error("EVMInterpreter.Run / Validate Stack error", "error", err, "CodeByte", contract.Code)
+
+		if stack.len() > operation.maxStack {
+			log.Error("EVMInterpreter.Run / Stack Overflow", "error", err, "Stack.len()", stack.len(), "Operation", operation)
+			return nil, err
+		} else if stack.len() < operation.minStack {
+			log.Error("EVMInterpreter.Run / Stack Underflow", "error", err)
 			return nil, err
 		}
 		// If the operation is valid, enforce and write restrictions
@@ -238,13 +247,15 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// calculate the new memory size and expand the memory to fit
 		// the operation
 		if operation.memorySize != nil {
-			memSize, overflow := bigUint64(operation.memorySize(stack))
+			memSize, overflow := operation.memorySize(stack)
 			if overflow {
+				log.Error("Overflow !")
 				return nil, errGasUintOverflow
 			}
 			// memory is expanded in words of 32 bytes. Gas
 			// is also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
+				log.Error("Gas Overflow !")
 				return nil, errGasUintOverflow
 			}
 		}
@@ -252,31 +263,30 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// cost is explicitly set so that the capture state defer method can get the proper cost
 		//
 		// 가스를 소비하고 충분한 가스가 없을 경우 오류를 반환한다.
-		cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
-		if err != nil || !contract.UseGas(cost) {
-			return nil, ErrOutOfGas
-		}
+		//
+		// [Berith]
+		// cost, err = operation.gasCost(in.gasTable, in.evm, contract, stack, mem, memorySize)
+		// if err != nil || !contract.UseGas(cost) {
+		// 	return nil, ErrOutOfGas
+		// }
 		if memorySize > 0 {
 			mem.Resize(memorySize)
 		}
 
+		// [Berith]
+		// cost => operation.constantGas
 		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, cost, mem, stack, contract, in.evm.depth, err)
+			in.cfg.Tracer.CaptureState(in.evm, pc, op, gasCopy, operation.constantGas, mem, stack, contract, in.evm.depth, err)
 			logged = true
 		}
 
 		// execute the operation
 		res, err := operation.execute(&pc, in, contract, mem, stack)
-		// verifyPool is a build flag. Pool verification makes sure the integrity
-		// of the integer pool by comparing values to a default value.
-		if verifyPool {
-			verifyIntegerPool(in.intPool)
-		}
+
 		// if the operation clears the return data (e.g. it has returning data)
 		// set the last return to the result of the operation.
 		if operation.returns {
 			in.returnData = res
-			log.Warn("Interpreter returns", res)
 		}
 
 		switch {
@@ -284,8 +294,10 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			log.Warn("EVMInterpreter.Run / Error occured after excute code", err)
 			return nil, err
 		case operation.reverts:
+			log.Warn("EVMInterpreter.Run / revert", "operation", operation)
 			return res, errExecutionReverted
 		case operation.halts:
+			log.Warn("EVMInterpreter.Run / halts", "operation", operation)
 			return res, nil
 		case !operation.jumps:
 			pc++

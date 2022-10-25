@@ -17,7 +17,6 @@
 package accounts
 
 import (
-	"fmt"
 	"reflect"
 	"sort"
 	"sync"
@@ -25,9 +24,18 @@ import (
 	"github.com/BerithFoundation/berith-chain/event"
 )
 
+// Config contains the settings of the global account manager.
+//
+// TODO(rjl493456442, karalabe, holiman): Get rid of this when account management
+// is removed in favor of Clef.
+type Config struct {
+	InsecureUnlockAllowed bool // Whether account unlocking in insecure environment is allowed
+}
+
 // Manager is an overarching account manager that can communicate with various
 // backends for signing transactions.
 type Manager struct {
+	config   *Config                    // Global account manager configurations
 	backends map[reflect.Type][]Backend // Index of backends currently registered
 	updaters []event.Subscription       // Wallet update subscriptions for all backends
 	updates  chan WalletEvent           // Subscription sink for backend wallet changes
@@ -41,8 +49,7 @@ type Manager struct {
 
 // NewManager creates a generic account manager to sign transaction via various
 // supported backends.
-func NewManager(backends ...Backend) *Manager {
-	fmt.Println("NewManager() 호출")
+func NewManager(config *Config, backends ...Backend) *Manager {
 	// Retrieve the initial list of wallets from the backends and sort by URL
 	var wallets []Wallet
 	for _, backend := range backends {
@@ -53,11 +60,11 @@ func NewManager(backends ...Backend) *Manager {
 
 	subs := make([]event.Subscription, len(backends))
 	for i, backend := range backends {
-		fmt.Println("backend Type : ", reflect.TypeOf(backend))
 		subs[i] = backend.Subscribe(updates)
 	}
 	// Assemble the account manager and return
 	am := &Manager{
+		config:   config,
 		backends: make(map[reflect.Type][]Backend),
 		updaters: subs,
 		updates:  updates,
@@ -68,7 +75,6 @@ func NewManager(backends ...Backend) *Manager {
 		kind := reflect.TypeOf(backend)
 		am.backends[kind] = append(am.backends[kind], backend)
 	}
-	fmt.Println("Manager.backends : ", am.backends)
 	go am.update()
 
 	return am
@@ -84,7 +90,6 @@ func (am *Manager) Close() error {
 // update is the wallet event loop listening for notifications from the backends
 // and updating the cache of wallets.
 func (am *Manager) update() {
-	fmt.Println("Manager.update() 호출")
 	// Close all subscriptions when the manager terminates
 	defer func() {
 		am.lock.Lock()
@@ -99,7 +104,6 @@ func (am *Manager) update() {
 	for {
 		select {
 		case event := <-am.updates:
-			fmt.Println("Manager.update() - am.updates 개방 후 하위로직 실행")
 			// Wallet event arrived, update local cache
 			am.lock.Lock()
 			switch event.Kind {
@@ -174,7 +178,6 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.
 func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
-	fmt.Println("accounts.go 174 - Manager.Subscribe() 호출")
 	return am.feed.Subscribe(sink)
 }
 

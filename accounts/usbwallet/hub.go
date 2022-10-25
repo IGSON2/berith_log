@@ -18,7 +18,6 @@ package usbwallet
 
 import (
 	"errors"
-	"fmt"
 	"runtime"
 	"sync"
 	"time"
@@ -72,9 +71,15 @@ func NewLedgerHub() (*Hub, error) {
 	return newHub(LedgerScheme, 0x2c97, []uint16{0x0000 /* Ledger Blue */, 0x0001 /* Ledger Nano S */}, 0xffa0, 0, newLedgerDriver)
 }
 
-// NewTrezorHub creates a new hardware wallet manager for Trezor devices.
-func NewTrezorHub() (*Hub, error) {
+// NewTrezorHubWithHID creates a new hardware wallet manager for Trezor devices.
+func NewTrezorHubWithHID() (*Hub, error) {
 	return newHub(TrezorScheme, 0x534c, []uint16{0x0001 /* Trezor 1 */}, 0xff00, 0, newTrezorDriver)
+}
+
+// NewTrezorHubWithWebUSB creates a new hardware wallet manager for Trezor devices with
+// firmware version > 1.8.0
+func NewTrezorHubWithWebUSB() (*Hub, error) {
+	return newHub(TrezorScheme, 0x1209, []uint16{0x53c1 /* Trezor WebUSB */}, 0xffff /* No usage id on webusb, don't match unset (0) */, 0, newTrezorDriver)
 }
 
 // newHub creates a new hardware wallet manager for generic USB devices.
@@ -100,7 +105,6 @@ func newHub(scheme string, vendorID uint16, productIDs []uint16, usageID uint16,
 func (hub *Hub) Wallets() []accounts.Wallet {
 	// Make sure the list of wallets is up to date
 	hub.refreshWallets()
-	fmt.Println("refreshWallets() 호출")
 
 	hub.stateLock.RLock()
 	defer hub.stateLock.RUnlock()
@@ -204,7 +208,6 @@ func (hub *Hub) refreshWallets() {
 // Subscribe implements accounts.Backend, creating an async subscription to
 // receive notifications on the addition or removal of USB wallets.
 func (hub *Hub) Subscribe(sink chan<- accounts.WalletEvent) event.Subscription {
-	fmt.Println("usbwallet.go 204 - Subscribe() 호출")
 	// We need the mutex to reliably start/stop the update loop
 	hub.stateLock.Lock()
 	defer hub.stateLock.Unlock()

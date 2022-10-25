@@ -436,7 +436,7 @@ func (s *StateDB) GetBehindBalance(addr common.Address) []Behind {
 	return []Behind{}
 }
 
-//[BERITH] Penalty
+// [BERITH] Penalty
 func (s *StateDB) AddPenalty(addr common.Address, blockNumber *big.Int) {
 	stateObject := s.getStateObject(addr)
 	if stateObject == nil {
@@ -501,6 +501,7 @@ func (s *StateDB) SetNonce(addr common.Address, nonce uint64) {
 
 func (s *StateDB) SetCode(addr common.Address, code []byte) {
 	stateObject := s.GetOrNewStateObject(addr)
+	log.Warn("StateDB.SetCode", "addr", addr.Hex(), "Balance", stateObject.Balance())
 	if stateObject != nil {
 		stateObject.SetCode(crypto.Keccak256Hash(code), code)
 	}
@@ -519,7 +520,6 @@ func (s *StateDB) SetState(addr common.Address, key, value common.Hash) {
 // The account's state object is still available until the state is committed,
 // getStateObject will return a non-nil account after Suicide.
 func (s *StateDB) Suicide(addr common.Address) bool {
-	fmt.Println("StateDB.Suicide() 호출")
 	stateObject := s.getStateObject(addr)
 	if stateObject == nil {
 		return false
@@ -541,19 +541,23 @@ func (s *StateDB) Suicide(addr common.Address) bool {
 
 // updateStateObject writes the given object to the trie.
 func (s *StateDB) updateStateObject(stateObject *stateObject) {
+	log.Warn("StateDB.updateStateObject", "Addr", stateObject.address.Hex(), "Balance", stateObject.Balance())
 	addr := stateObject.Address()
 	data, err := rlp.EncodeToBytes(stateObject)
 	if err != nil {
 		panic(fmt.Errorf("can't encode object at %x: %v", addr[:], err))
 	}
 	s.setError(s.trie.TryUpdate(addr[:], data))
+	log.Warn("StateDB.updateStateObject", "DB Err", s.dbErr, "Balance", stateObject.Balance())
 }
 
 // deleteStateObject removes the given object from the state trie.
 func (s *StateDB) deleteStateObject(stateObject *stateObject) {
+	log.Warn("StateDB.deleteStateObject", "Addr", stateObject.address.Hex(), "Balance", stateObject.Balance())
 	stateObject.deleted = true
 	addr := stateObject.Address()
 	s.setError(s.trie.TryDelete(addr[:]))
+	log.Warn("StateDB.deleteStateObject", "DB Err", s.dbErr, "Balance", stateObject.Balance())
 }
 
 // Retrieve a state object given by the address. Returns nil if not found.
@@ -568,6 +572,9 @@ func (s *StateDB) getStateObject(addr common.Address) (stateObject *stateObject)
 
 	// Load the object from the database.
 	enc, err := s.trie.TryGet(addr[:])
+	if err != nil {
+		log.Error("getStateObject", "Error", err)
+	}
 	if len(enc) == 0 {
 		s.setError(err)
 		return nil
@@ -617,8 +624,8 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 // CreateAccount is called during the EVM CREATE operation. The situation might arise that
 // a contract does the following:
 //
-//   1. sends funds to sha(account ++ (nonce + 1))
-//   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
+//  1. sends funds to sha(account ++ (nonce + 1))
+//  2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Berith doesn't disappear.
 func (s *StateDB) CreateAccount(addr common.Address) {
@@ -703,7 +710,6 @@ func (s *StateDB) Snapshot() int {
 
 // RevertToSnapshot reverts all state changes made since the given revision.
 func (s *StateDB) RevertToSnapshot(revid int) {
-	fmt.Println("StateDB.RevertToSnapshot () 호출")
 	// Find the snapshot in the stack of valid snapshots.
 	idx := sort.Search(len(s.validRevisions), func(i int) bool {
 		return s.validRevisions[i].id >= revid
@@ -728,9 +734,9 @@ func (s *StateDB) GetRefund() uint64 {
 //
 // Finalise는 스스로 파괴되는 객체를 지움으로써 상태를 종료한다. 그리고 journal과 refuns를 정리한다.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
-	fmt.Println("StateDB.Finalise() 호출")
 	for addr := range s.journal.dirties {
 		stateObject, exist := s.stateObjects[addr]
+		log.Warn("StateDb.Finalise", "addr", addr.Hex(), "Balance", stateObject.Balance())
 		if !exist {
 			// ripeMD is 'touched' at block 1714175, in tx 0x1237f737031e40bcde4a8b7e717b2d15e3ecadfe49bb1bbc71ee9deb09c6fcf2
 			// That tx goes out of gas, and although the notion of 'touched' does not exist there, the
@@ -768,7 +774,6 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 // Prepare는 EVM이 새 상태 로그를 내보낼 때 사용되는 현재 트랜잭션 해시 및
 // 인덱스 및 블록 해시를 설정합니다.
 func (s *StateDB) Prepare(thash, bhash common.Hash, ti int) {
-	fmt.Println("StateDB.Prepare() 호출")
 	s.thash = thash
 	s.bhash = bhash
 	s.txIndex = ti
@@ -783,7 +788,6 @@ func (s *StateDB) clearJournalAndRefund() {
 // Commit writes the state to the underlying in-memory trie database.
 // Commit는 state를 메모리 내부에있는 트리 데이터베이스에 기록한다.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) {
-	fmt.Println("StateDB.Commit() 호출")
 	defer s.clearJournalAndRefund()
 
 	for addr := range s.journal.dirties {

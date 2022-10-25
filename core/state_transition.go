@@ -125,7 +125,6 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) (uint64, error)
 
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
-	log.Warn("NewStateTransition", "msg.Data", msg.Data())
 	return &StateTransition{
 		gp:       gp,
 		evm:      evm,
@@ -239,19 +238,12 @@ func (st *StateTransition) TransitionDb(base types.JobWallet, target types.JobWa
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		fmt.Printf("StateTransition.TransitionDb / Addr : %v,  Nonce : %v\n", msg.From().Hex(), st.state.GetNonce(sender.Address()))
-
-		// "Burn" custom temporary command test
-		if (base == types.Main || target == types.Main) && bytes.Equal(sender.Address().Bytes(), msg.To().Bytes()) {
-			st.evm.StateDB.SubBalance(sender.Address(), st.value)
-		}
 
 		// [BERITH] staking value false
 		ret, st.gas, vmerr = evm.Call(sender, st.to(), st.data, st.gas, st.value, base, target)
 	}
 	if vmerr != nil {
 		log.Debug("VM returned with error", "err", vmerr)
-		fmt.Println("TransitionDb / VMerr : ", vmerr)
 		// The only possible consensus-error would be if there wasn't
 		// sufficient balance to make the transfer happen. The first
 		// balance transfer may never fail.

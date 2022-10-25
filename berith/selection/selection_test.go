@@ -1,7 +1,6 @@
 package selection
 
 import (
-	"fmt"
 	"math/big"
 	"sort"
 	"strconv"
@@ -161,7 +160,4 @@ func TestScore(t *testing.T) {
 		}
 	}
 
-	for _, addr := range list {
-		fmt.Printf("[ADDR : %s, SCORE : %d]\n", addr.Hex(), totalScore[addr])
-	}
 }

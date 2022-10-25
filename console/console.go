@@ -176,56 +176,6 @@ func (c *Console) init(preload []string) error {
 		log.Error("임시 변수 초기화 불가능", "err", err)
 	}
 
-	// 컨트랙트 실험
-	_, err = c.jsre.Run(`var abi = [
-		{
-			"constant": false,
-			"inputs": [
-				{
-					"name": "_value",
-					"type": "uint256"
-				}
-			],
-			"name": "transfer",
-			"outputs": [
-				{
-					"name": "",
-					"type": "bool"
-				}
-			],
-			"payable": true,
-			"stateMutability": "payable",
-			"type": "function"
-		},
-		{
-			"inputs": [],
-			"payable": true,
-			"stateMutability": "payable",
-			"type": "constructor"
-		},
-		{
-			"constant": true,
-			"inputs": [],
-			"name": "getBalance",
-			"outputs": [
-				{
-					"name": "",
-					"type": "uint256"
-				}
-			],
-			"payable": false,
-			"stateMutability": "view",
-			"type": "function"
-		}
-	];
-	var object = '0x6080604052610175806100136000396000f3fe608060405260043610610046576000357c01000000000000000000000000000000000000000000000000000000009004806312065fe01461004b57806312514bba14610076575b600080fd5b34801561005757600080fd5b506100606100bc565b6040518082815260200191505060405180910390f35b6100a26004803603602081101561008c57600080fd5b81019080803590602001909291905050506100db565b604051808215151515815260200191505060405180910390f35b60003073ffffffffffffffffffffffffffffffffffffffff1631905090565b6000816100e66100bc565b101515156100f357600080fd5b60003390508073ffffffffffffffffffffffffffffffffffffffff166108fc849081150290604051600060405180830381858888f1935050505015801561013e573d6000803e3d6000fd5b50600191505091905056fea165627a7a72305820a8829579e48f92b474721bdbd0f76daf873a260321abc031fa76d90b7c48f5410029';
-
-	var contractAbi = berith.contract(abi);
-	var newc = contractAbi.new({from: u1, data: object, gas: 1000000, value:10000000000000000000});
-						`)
-	if err != nil {
-		log.Error("컨트랙트 초기화 오류", "err", err)
-	}
 	// Initialize the global name register (disabled for now)
 	//c.jsre.Run(`var GlobalRegistrar = berith.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
 

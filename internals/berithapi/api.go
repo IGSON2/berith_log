@@ -421,7 +421,8 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args BerithSend
 // safely used to calculate a signature from.
 //
 // The hash is calulcated as
-//   keccak256("\x19Berith Signed Message:\n"${message length}${message}).
+//
+//	keccak256("\x19Berith Signed Message:\n"${message length}${message}).
 //
 // This gives context to the signed message and prevents signing of transactions.
 func signHash(data []byte) []byte {
@@ -1338,13 +1339,11 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Ber
 		s.nonceLock.LockAddr(args.From)
 		defer s.nonceLock.UnlockAddr(args.From)
 	}
-	log.Warn("Requsted argument", "Base", args.Base, "Target", args.Target, "Data", args.Data, "Input", args.Input, "From", args.From, "To", args.To, "Gas", args.Gas, "Value", args.Value)
 	// Set some sanity defaults and terminate on failure
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return common.Hash{}, err
 	}
 	// Assemble the transaction and sign with the wallet
-	log.Warn("Set argument", "Base", args.Base, "Target", args.Target, "Data", args.Data, "Input", args.Input, "From", args.From, "To", args.To, "Gas", args.Gas, "Value", args.Value)
 	tx := args.toTransaction()
 
 	var chainID *big.Int

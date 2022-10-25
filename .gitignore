@@ -57,3 +57,6 @@ cmd/berith/password.txt
 cmd/berith/bdata*
 
 cmd/berith/genesis.json
+cmd/berith/genesis.json
+cmd/berith/password
+cmd/berith/genesis.json

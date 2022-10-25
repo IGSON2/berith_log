@@ -127,8 +127,6 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	var root []byte
 	if config.IsByzantium(header.Number) {
 		statedb.Finalise(true)
-		info := statedb.GetOrNewStateObject(msg.From()).AccountInfo()
-		fmt.Printf("ApplyTransaction / Finalised stateDB.\n\tAddr : %v\n\tBalane: %v\n\tNonce : %v\n", msg.From().Hex(), info.Balance, info.Nonce)
 	} else {
 		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
 	}
@@ -152,12 +150,12 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 }
 
 /*
-	[Berith]
-	adjust Stake balance and Selection point For hard fork BIP4
-	Check the Recipient's Stake Balance of the transaction to be processed, and change it if it has more than the limit.
+[Berith]
+adjust Stake balance and Selection point For hard fork BIP4
+Check the Recipient's Stake Balance of the transaction to be processed, and change it if it has more than the limit.
 
-	스테이크 밸런스와 BIP4하드포크를 가리키는 셀렉션 포인트를 수정한다.
-	처리할 거래의 수취인 지분 잔액을 확인하고 한도를 초과하는 경우 변경한다.
+스테이크 밸런스와 BIP4하드포크를 가리키는 셀렉션 포인트를 수정한다.
+처리할 거래의 수취인 지분 잔액을 확인하고 한도를 초과하는 경우 변경한다.
 */
 func adjustStateForBIP4(config *params.ChainConfig, statedb *state.StateDB, header *types.Header, tx *types.Transaction) {
 	fmt.Println("adjustStateForBIP4 () 호출")
@@ -185,9 +183,9 @@ func adjustStateForBIP4(config *params.ChainConfig, statedb *state.StateDB, head
 }
 
 /*
-	[Berith]
-	Check if the break transaction satisfies the lock up condition
-	The Break Transaction has a three-day grace period.
+[Berith]
+Check if the break transaction satisfies the lock up condition
+The Break Transaction has a three-day grace period.
 */
 func checkBreakTransaction(msg types.Message, blockNumber *big.Int, period uint64) bool {
 	lockUpPeriod := big.NewInt(int64((60 * 60 * 24 * 3) / period)) // Created blocks in 3 days

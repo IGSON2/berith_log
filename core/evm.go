@@ -17,6 +17,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/BerithFoundation/berith-chain/common"
@@ -98,6 +99,7 @@ func CanTransfer(db vm.StateDB, addr common.Address, amount *big.Int, base types
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
 func Transfer(db vm.StateDB, sender, recipient common.Address, amount, blockNumber *big.Int, base, target types.JobWallet) {
+	fmt.Println("Transfer() 호출")
 	switch base {
 	case types.Main:
 		if target == types.Main {
