@@ -229,8 +229,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			log.Error("EVMInterpreter.Run / Invalid op error ", "error", err, "CodeByte", contract.Code)
 			return nil, fmt.Errorf("invalid opcode 0x%x", int(op))
 		}
-		// [Berith]
-		// if err := operation.validateStack(stack); err != nil {
+
 		if stack.len() > operation.maxStack {
 			log.Error("EVMInterpreter.Run / Stack Overflow", "error", err, "Stack.len()", stack.len(), "Operation", operation)
 			return nil, err
